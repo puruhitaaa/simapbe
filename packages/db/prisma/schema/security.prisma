@@ -1,0 +1,35 @@
+// SIMAPBE Security Schema
+// Domain 6: Security & Risk (Keamanan)
+// Ref: Perpres 132/2022
+
+model SecurityAudit {
+  id          String      @id @default(cuid())
+  appId       String
+  application Application @relation(fields: [appId], references: [id])
+
+  auditDate DateTime
+  score     Float?
+  status    AuditStatus
+  findings  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("security_audit")
+}
+
+model RiskRegister {
+  id    String @id @default(cuid())
+  opdId String
+  opd   Opd    @relation(fields: [opdId], references: [id])
+
+  riskDescription String
+  impactLevel     RiskLevel
+  likelihood      RiskLevel @default(MEDIUM)
+  mitigationPlan  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("risk_register")
+}

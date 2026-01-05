@@ -1,0 +1,23 @@
+// SIMAPBE Service Schema
+// Domain 5: Public Service (Layanan SPBE)
+// Ref: Perpres 132/2022
+
+model Service {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  type        ServiceType
+
+  // Link to Business Process (required for "Keterpaduan")
+  probisId        String?
+  businessProcess BusinessProcess? @relation(fields: [probisId], references: [id])
+
+  // Link to supporting Application
+  appId       String?
+  application Application? @relation(fields: [appId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("service")
+}

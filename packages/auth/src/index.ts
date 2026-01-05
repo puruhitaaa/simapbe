@@ -12,6 +12,23 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+
+  // SPBE Role-Based Access Control
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        defaultValue: "OPERATOR",
+        input: false, // Prevent users from self-assigning roles
+      },
+      opdId: {
+        type: "string",
+        required: false,
+        input: false, // Assigned by admin only
+      },
+    },
+  },
+
   advanced: {
     defaultCookieAttributes: {
       sameSite: "none",

@@ -1,0 +1,32 @@
+// SIMAPBE Application Schema
+// Domain 3: Application (Aplikasi)
+// Ref: Perpres 95/2018
+
+model Application {
+  id   String @id @default(cuid())
+  name String
+
+  // Owning OPD
+  opdId String
+  opd   Opd    @relation(fields: [opdId], references: [id])
+
+  type     AppType      @default(KHUSUS)
+  platform PlatformType
+  status   AppStatus    @default(ACTIVE)
+
+  // Technical details
+  programmingLang String?
+  databaseType    String?
+  repositoryUrl   String? // Git repo for IP ownership
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  infrastructure Infrastructure[]
+  usedData       ApplicationData[]
+  services       Service[]
+  securityAudits SecurityAudit[]
+
+  @@map("application")
+}

@@ -1,0 +1,75 @@
+// SIMAPBE Shared Enums
+// Ref: Perpres 132/2022 (National SPBE Architecture)
+
+enum UserRole {
+  SUPER_ADMIN // Diskominfo - Full access
+  OPERATOR // OPD Staff - Limited to their OPD
+  AUDITOR // Inspektorat - Read-only audit access
+  LEADER // Executive - Dashboard access
+}
+
+enum AppType {
+  UMUM // Shared National/General Application
+  KHUSUS // Specific to OPD
+}
+
+enum PlatformType {
+  WEB
+  MOBILE
+  DESKTOP
+  API
+}
+
+enum AppStatus {
+  PLANNING
+  DEVELOPMENT
+  ACTIVE
+  ARCHIVED
+}
+
+enum DataClass {
+  PUBLIC
+  RESTRICTED
+  SECRET
+}
+
+enum DataRelation {
+  PRODUCER
+  CONSUMER
+}
+
+enum InfraType {
+  SERVER_PHYSICAL
+  VIRTUAL_MACHINE
+  CLOUD_SAAS
+  CLOUD_IAAS
+  NETWORK_DEVICE
+}
+
+enum ServiceType {
+  G2C // Government to Citizen
+  G2B // Government to Business
+  G2G // Government to Government
+  G2E // Government to Employee
+}
+
+enum AuditStatus {
+  PENDING
+  PASSED
+  FAILED_REMEDIATION_REQUIRED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum PlanStatus {
+  PLANNED
+  BUDGETED
+  ONGOING
+  COMPLETED
+  DELAYED
+}

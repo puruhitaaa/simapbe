@@ -1,0 +1,37 @@
+// SIMAPBE Data Schema
+// Domain 2: Data & Information (Satu Data)
+// Ref: Perpres 39/2019 (Satu Data Indonesia)
+
+model DataStandard {
+  id             String    @id @default(cuid())
+  dataName       String
+  description    String?
+  format         String // e.g., JSON, CSV, XML
+  validityPeriod String // e.g., "Tahunan", "Bulanan"
+  classification DataClass @default(PUBLIC)
+
+  // Producer OPD
+  producerOpdId String?
+  producerOpd   Opd?    @relation(fields: [producerOpdId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  applications ApplicationData[]
+
+  @@map("data_standard")
+}
+
+// Junction table for App-Data relationship
+model ApplicationData {
+  appId        String
+  dataId       String
+  relationType DataRelation // PRODUCER or CONSUMER
+
+  application  Application  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  dataStandard DataStandard @relation(fields: [dataId], references: [id], onDelete: Cascade)
+
+  @@id([appId, dataId])
+  @@map("application_data")
+}

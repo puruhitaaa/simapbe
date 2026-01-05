@@ -1,0 +1,27 @@
+// SIMAPBE Infrastructure Schema
+// Domain 4: Infrastructure (Infrastruktur)
+// Ref: Perpres 132/2022
+
+model Infrastructure {
+  id       String    @id @default(cuid())
+  name     String
+  type     InfraType
+  location String? // PDN, Local Server Room, etc.
+
+  // Capacity metrics
+  vcpu      Int?
+  ramGb     Int?
+  storageGb Int?
+
+  // Owning OPD
+  opdId String
+  opd   Opd    @relation(fields: [opdId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations - Apps hosted on this infra
+  applications Application[]
+
+  @@map("infrastructure")
+}

@@ -1,0 +1,46 @@
+// SIMAPBE Architecture Schema
+// Domain 1: Organization & Business Process (Tata Kelola)
+// Ref: Perpres 132/2022
+
+// Organisasi Perangkat Daerah (OPD)
+model Opd {
+  id      String  @id @default(cuid())
+  code    String  @unique // Kode Satker/Unit
+  name    String // e.g., "Dinas Kesehatan Kota Bandung"
+  acronym String? // e.g., "DINKES"
+  address String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users         User[]
+  applications  Application[]
+  infraAssets   Infrastructure[]
+  risks         RiskRegister[]
+  dataStandards DataStandard[]
+
+  @@map("opd")
+}
+
+// Business Process Hierarchy (Probismet)
+// Level 1: Sektor, Level 2: Urusan, Level 3: Fungsi
+model BusinessProcess {
+  id            String  @id @default(cuid())
+  kodeProbismet String  @unique // Standardized Code (e.g., RAB.04.01)
+  name          String
+  description   String?
+  level         Int // 1=Sektor, 2=Urusan, 3=Fungsi
+
+  parentId String?
+  parent   BusinessProcess?  @relation("ProbismetHierarchy", fields: [parentId], references: [id])
+  children BusinessProcess[] @relation("ProbismetHierarchy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  services Service[]
+
+  @@map("business_process")
+}

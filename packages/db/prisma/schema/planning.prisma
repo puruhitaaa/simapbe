@@ -1,0 +1,32 @@
+// SIMAPBE Planning Schema
+// Module B: Peta Rencana & Budgeting
+// Ref: Perpres 132/2022
+
+model SpbePlan {
+  id             String     @id @default(cuid())
+  year           Int
+  initiativeName String
+  domain         String // Layer (Layanan, Aplikasi, Data, etc)
+  description    String?
+  budget         Decimal?
+  status         PlanStatus @default(PLANNED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("spbe_plan")
+}
+
+// Audit TIK Logs for compliance
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String // CREATE, UPDATE, DELETE
+  entity    String // Table name
+  entityId  String? // ID of affected record
+  details   String? // JSON details of the change
+  timestamp DateTime @default(now())
+
+  @@map("audit_log")
+}
