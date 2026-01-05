@@ -1,7 +1,6 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { authClient } from "@/lib/auth-client";
+import { getSession } from "@/lib/auth-utils";
 import { AppSidebar } from "./_components/app-sidebar";
 import { DashboardHeader } from "./_components/dashboard-header";
 
@@ -10,12 +9,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await authClient.getSession({
-    fetchOptions: {
-      headers: await headers(),
-      throw: true,
-    },
-  });
+  const session = await getSession();
 
   if (!session?.user) {
     redirect("/login");

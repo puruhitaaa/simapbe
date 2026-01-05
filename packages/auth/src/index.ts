@@ -2,6 +2,7 @@ import prisma from "@simapbe/db";
 import { env } from "@simapbe/env/server";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins";
 
 /**
@@ -56,6 +57,7 @@ export const auth = betterAuth({
       defaultRole: "OPERATOR",
       adminRoles: ["SUPER_ADMIN"],
     }),
+    nextCookies(),
   ],
 });
 
