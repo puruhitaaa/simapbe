@@ -13,9 +13,15 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset",
+    "db:seed": "bun run prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "bun run prisma/seed.ts"
   },
   "dependencies": {
+    "@noble/hashes": "^2.0.1",
     "@prisma/adapter-pg": "^7.1.0",
     "@prisma/client": "catalog:",
     "@simapbe/env": "workspace:*",

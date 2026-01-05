@@ -1,0 +1,37 @@
+// ============================================
+// Domain 5: Service Architecture (Layanan SPBE)
+// Ref: Perpres 132/2022 - Arsitektur Layanan
+// ============================================
+
+model Service {
+  id   String @id @default(cuid())
+  name String // Service name (e.g., "Pendaftaran KTP Elektronik")
+  code String @unique // Unique service code
+
+  description String?
+  type        ServiceType @default(G2C)
+
+  // URL/Access Point (if available)
+  url String?
+
+  // Cross-Domain Links (Keterpaduan)
+  // Link to Business Process (Required for traceability)
+  probisId        String?
+  businessProcess BusinessProcess? @relation(fields: [probisId], references: [id], onDelete: SetNull)
+
+  // Link to Supporting Application
+  appId       String?
+  application Application? @relation(fields: [appId], references: [id], onDelete: SetNull)
+
+  // Service Status
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@index([type])
+  @@index([probisId])
+  @@index([appId])
+  @@map("service")
+}

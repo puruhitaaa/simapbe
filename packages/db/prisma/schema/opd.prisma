@@ -1,0 +1,26 @@
+// ============================================
+// OPD (Organisasi Perangkat Daerah) - Tenancy Model
+// ============================================
+
+model Opd {
+  id      String  @id @default(cuid())
+  code    String  @unique // Kode Satker/Unit (e.g., "DISKOMINFO")
+  name    String // Full name (e.g., "Dinas Komunikasi dan Informatika Kota Bandung")
+  acronym String? // Short form (e.g., "DISKOMINFO")
+  address String?
+  phone   String?
+  email   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users          User[]
+  applications   Application[]
+  infrastructure Infrastructure[]
+  risks          RiskRegister[]
+  dataStandards  DataStandard[] // Data produced by this OPD
+
+  @@index([code])
+  @@map("opd")
+}

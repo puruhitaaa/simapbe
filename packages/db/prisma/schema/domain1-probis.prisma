@@ -1,0 +1,28 @@
+// ============================================
+// Domain 1: Business Process (Proses Bisnis)
+// Ref: Perpres 132/2022 - Arsitektur Proses Bisnis
+// ============================================
+
+model BusinessProcess {
+  id            String  @id @default(cuid())
+  kodeProbismet String  @unique // Standardized Code (e.g., "RAB.04.01")
+  name          String // Process name
+  description   String?
+  level         Int // 1=Sektor, 2=Urusan, 3=Fungsi, 4=Sub-Fungsi
+
+  // Self-referential hierarchy: Sektor → Urusan → Fungsi → Sub-Fungsi
+  parentId String?
+  parent   BusinessProcess?  @relation("ProbismetHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children BusinessProcess[] @relation("ProbismetHierarchy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  services Service[] // Services supported by this process
+
+  @@index([kodeProbismet])
+  @@index([parentId])
+  @@index([level])
+  @@map("business_process")
+}

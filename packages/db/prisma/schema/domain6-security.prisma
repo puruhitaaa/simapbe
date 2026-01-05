@@ -1,0 +1,86 @@
+// ============================================
+// Domain 6: Security & Risk Management
+// Ref: Perpres 132/2022 - Domain Keamanan SPBE
+// ============================================
+
+model SecurityAudit {
+  id String @id @default(cuid())
+
+  // Link to Application
+  appId String
+  app   Application @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  // Audit Details
+  auditDate DateTime
+  auditor   String? // Name or ID of auditor
+  score     Float? // Audit score (0-100)
+  status    AuditStatus @default(PENDING)
+
+  // Findings
+  findings        String? // Summary of findings
+  recommendations String? // Recommended actions
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([appId])
+  @@index([auditDate])
+  @@index([status])
+  @@map("security_audit")
+}
+
+model RiskRegister {
+  id String @id @default(cuid())
+
+  // Link to OPD
+  opdId String
+  opd   Opd    @relation(fields: [opdId], references: [id], onDelete: Cascade)
+
+  // Risk Details
+  riskCode        String  @unique // Unique risk code
+  riskDescription String
+  riskCategory    String? // e.g., "Operational", "Security", "Compliance"
+
+  // Risk Assessment (Impact vs Likelihood)
+  impactLevel     RiskLevel @default(LOW)
+  likelihoodLevel RiskLevel @default(LOW)
+  riskScore       Int? // Calculated: Impact * Likelihood (1-25)
+
+  // Mitigation
+  mitigationPlan    String?
+  mitigationStatus  String? // e.g., "Not Started", "In Progress", "Completed"
+  responsiblePerson String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([opdId])
+  @@index([riskCode])
+  @@index([impactLevel])
+  @@map("risk_register")
+}
+
+// Audit Log for all system transactions (Audit TIK)
+model AuditLog {
+  id String @id @default(cuid())
+
+  // Actor
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String?
+  userAgent String?
+
+  // Action Details
+  action   String // e.g., "CREATE_APPLICATION", "UPDATE_SERVICE"
+  entity   String // e.g., "Application", "Service"
+  entityId String? // ID of the affected entity
+  changes  String? // JSON diff (old vs new values)
+
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([timestamp])
+  @@map("audit_log")
+}

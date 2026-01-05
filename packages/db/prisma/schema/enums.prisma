@@ -1,0 +1,88 @@
+// ============================================
+// SPBE Domain Enums (Perpres 132/2022)
+// ============================================
+
+// User & Access Control
+enum UserRole {
+  SUPER_ADMIN // Diskominfo - Full access
+  OPERATOR // OPD Staff - Limited to own OPD
+  AUDITOR // Inspektorat - Read-only audit access
+  LEADER // Executive - Dashboard view
+}
+
+// Domain 3: Application
+enum AppType {
+  UMUM // Shared National/General App
+  KHUSUS // Specific to OPD
+}
+
+enum PlatformType {
+  WEB
+  MOBILE
+  DESKTOP
+  API
+}
+
+enum AppStatus {
+  PLANNING
+  DEVELOPMENT
+  ACTIVE
+  ARCHIVED
+}
+
+// Domain 2: Data Architecture
+enum DataClass {
+  PUBLIC
+  RESTRICTED
+  SECRET
+}
+
+enum DataRelation {
+  PRODUCER
+  CONSUMER
+}
+
+// Domain 4: Infrastructure
+enum InfraType {
+  SERVER_PHYSICAL
+  VIRTUAL_MACHINE
+  CLOUD_SaaS
+  CLOUD_IaaS
+  NETWORK_DEVICE
+}
+
+enum InfraLocation {
+  PDN // Pusat Data Nasional
+  LOCAL // Local Server Room
+}
+
+// Domain 5: Service
+enum ServiceType {
+  G2C // Government to Citizen
+  G2B // Government to Business
+  G2G // Government to Government
+  G2E // Government to Employee
+}
+
+// Domain 6: Security
+enum AuditStatus {
+  PENDING
+  PASSED
+  FAILED_REMEDIATION_REQUIRED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// Planning Module
+enum PlanStatus {
+  PLANNED
+  BUDGETED
+  ONGOING
+  COMPLETED
+  DELAYED
+}

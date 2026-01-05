@@ -39,16 +39,18 @@ export const todoRouter = router({
       }
     }),
 
-  delete: publicProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-    try {
-      return await prisma.todo.delete({
-        where: { id: input.id },
-      });
-    } catch (error) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Todo not found",
-      });
-    }
-  }),
+  delete: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      try {
+        return await prisma.todo.delete({
+          where: { id: input.id },
+        });
+      } catch (error) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Todo not found",
+        });
+      }
+    }),
 });

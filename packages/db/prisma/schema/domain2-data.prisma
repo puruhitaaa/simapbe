@@ -1,0 +1,39 @@
+// ============================================
+// Domain 2: Data & Information Architecture
+// Ref: Satu Data Indonesia (Perpres 39/2019)
+// ============================================
+
+model DataStandard {
+  id       String @id @default(cuid())
+  dataName String // Name of the data standard
+  dataCode String @unique // Unique code for this data standard
+
+  // Satu Data Metadata
+  description     String?
+  format          String // e.g., "JSON", "XML", "CSV"
+  validityPeriod  String // e.g., "Annual", "Quarterly", "Monthly"
+  updateFrequency String? // How often data is updated
+
+  // Classification (Perpres 39/2019)
+  classification DataClass @default(PUBLIC)
+
+  // Producer OPD (Produsen Data)
+  producerOpdId String?
+  producerOpd   Opd?    @relation(fields: [producerOpdId], references: [id], onDelete: SetNull)
+
+  // Walidata Validation
+  isValidated   Boolean   @default(false)
+  validatedAt   DateTime?
+  validatedById String? // User ID who validated
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  applications ApplicationData[] // Apps that consume/produce this data
+
+  @@index([dataCode])
+  @@index([producerOpdId])
+  @@index([classification])
+  @@map("data_standard")
+}

@@ -1,0 +1,61 @@
+// ============================================
+// Domain 4: Infrastructure Architecture
+// Ref: Perpres 132/2022 - Arsitektur Infrastruktur
+// ============================================
+
+model Infrastructure {
+  id   String @id @default(cuid())
+  name String // Asset name
+  code String @unique // Unique asset code
+
+  type     InfraType     @default(VIRTUAL_MACHINE)
+  location InfraLocation @default(LOCAL)
+
+  // Technical Specifications
+  description String?
+  ipAddress   String?
+  specs       String? // JSON or text specs (vCPU, RAM, Storage)
+
+  // Capacity Planning
+  cpuCores  Int? // Number of CPU cores
+  ramGB     Int? // RAM in GB
+  storageGB Int? // Storage in GB
+  isActive  Boolean @default(true)
+
+  // Ownership
+  opdId String
+  opd   Opd    @relation(fields: [opdId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  applications ApplicationInfrastructure[]
+
+  @@index([code])
+  @@index([opdId])
+  @@index([location])
+  @@index([type])
+  @@map("infrastructure")
+}
+
+// Join table: Application <-> Infrastructure
+model ApplicationInfrastructure {
+  id String @id @default(cuid())
+
+  appId String
+  app   Application @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  infraId String
+  infra   Infrastructure @relation(fields: [infraId], references: [id], onDelete: Cascade)
+
+  // Usage details
+  purpose String? // e.g., "Production", "Staging", "Development"
+
+  createdAt DateTime @default(now())
+
+  @@unique([appId, infraId])
+  @@index([appId])
+  @@index([infraId])
+  @@map("application_infrastructure")
+}

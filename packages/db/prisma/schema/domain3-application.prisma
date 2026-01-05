@@ -1,0 +1,66 @@
+// ============================================
+// Domain 3: Application Architecture
+// Ref: Perpres 95/2018 - Moratorium Aplikasi
+// ============================================
+
+model Application {
+  id   String @id @default(cuid())
+  name String // Application name
+  code String @unique // Unique application code
+
+  // Classification (Perpres 95/2018)
+  type     AppType      @default(KHUSUS)
+  platform PlatformType @default(WEB)
+  status   AppStatus    @default(PLANNING)
+
+  // Technical Details
+  description     String?
+  programmingLang String? // e.g., "TypeScript", "Java", "PHP"
+  framework       String? // e.g., "Next.js", "Laravel"
+  databaseType    String? // e.g., "PostgreSQL", "MySQL"
+  repositoryUrl   String? // Git repository URL for IP ownership
+
+  // Ownership
+  opdId String
+  opd   Opd    @relation(fields: [opdId], references: [id], onDelete: Restrict)
+
+  // SDLC Tracking
+  developmentStartDate DateTime?
+  productionDate       DateTime?
+  lastAuditDate        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  usedData       ApplicationData[] // Data consumed/produced
+  infrastructure ApplicationInfrastructure[] // Infrastructure used
+  services       Service[] // Services this app supports
+  securityAudits SecurityAudit[]
+
+  @@index([code])
+  @@index([opdId])
+  @@index([type])
+  @@index([status])
+  @@map("application")
+}
+
+// Join table: Application <-> DataStandard
+model ApplicationData {
+  id String @id @default(cuid())
+
+  appId String
+  app   Application @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  dataId String
+  data   DataStandard @relation(fields: [dataId], references: [id], onDelete: Cascade)
+
+  relationType DataRelation // PRODUCER or CONSUMER
+
+  createdAt DateTime @default(now())
+
+  @@unique([appId, dataId])
+  @@index([appId])
+  @@index([dataId])
+  @@map("application_data")
+}

@@ -1,0 +1,48 @@
+// ============================================
+// Planning Module: Peta Rencana SPBE
+// Ref: Perpres 132/2022 - Peta Rencana
+// ============================================
+
+model SpbePlan {
+  id String @id @default(cuid())
+
+  // Plan Identification
+  planCode String @unique // Unique plan code
+  year     Int // Target year (e.g., 2025, 2026)
+  quarter  Int? // Optional quarter (1-4)
+
+  // Initiative Details
+  initiativeName String
+  description    String?
+
+  // Domain/Layer this plan affects
+  domain String // e.g., "LAYANAN", "APLIKASI", "DATA", "INFRASTRUKTUR"
+
+  // Budget Information
+  budget        Decimal? @db.Decimal(15, 2) // Budget in IDR
+  budgetCode    String? // RKA-PD budget code
+  fundingSource String? // e.g., "APBD", "APBN", "DAK"
+
+  // Status & Priority
+  status   PlanStatus @default(PLANNED)
+  priority Int        @default(3) // 1=Highest, 5=Lowest
+
+  // Gap Analysis Context
+  isGap          Boolean @default(false) // Is this filling a gap?
+  gapDescription String? // What gap this addresses
+
+  // Progress Tracking
+  progressPercent Int       @default(0) // 0-100
+  startDate       DateTime?
+  targetEndDate   DateTime?
+  actualEndDate   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planCode])
+  @@index([year])
+  @@index([domain])
+  @@index([status])
+  @@map("spbe_plan")
+}
