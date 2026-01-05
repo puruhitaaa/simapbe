@@ -496,7 +496,17 @@ export function ApplicationFormDialog({
                       value={field.value}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue>
+                          {(value: string) => {
+                            if (!value) return "Pilih OPD";
+                            const selectedOpd = opdList?.items?.find(
+                              (opd) => opd.id === value
+                            );
+                            return selectedOpd
+                              ? `${selectedOpd.acronym || selectedOpd.code} - ${selectedOpd.name}`
+                              : "Pilih OPD";
+                          }}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {opdList?.items?.map((opd) => (

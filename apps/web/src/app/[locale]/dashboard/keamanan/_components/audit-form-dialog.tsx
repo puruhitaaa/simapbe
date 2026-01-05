@@ -246,7 +246,17 @@ export function AuditFormDialog({
                       value={field.value}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue>
+                          {(value: string) => {
+                            if (!value) return "Pilih Aplikasi";
+                            const selectedApp = appList?.items?.find(
+                              (app) => app.id === value
+                            );
+                            return selectedApp
+                              ? `${selectedApp.code} - ${selectedApp.name}`
+                              : "Pilih Aplikasi";
+                          }}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {appList?.items?.map((app) => (

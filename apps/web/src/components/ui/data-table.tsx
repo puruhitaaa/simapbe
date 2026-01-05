@@ -59,6 +59,10 @@ export function DataTable<TData, TValue>({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [searchValue, setSearchValue] = useState("");
+  const [internalPagination, setInternalPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   // Use server-side pagination if provided
   const isServerSide = pageCount !== undefined;
@@ -67,13 +71,14 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: isServerSide ? undefined : getPaginationRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: isServerSide ? undefined : getFilteredRowModel(),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: isServerSide ? undefined : setInternalPagination,
     manualPagination: isServerSide,
     pageCount: pageCount ?? -1,
     state: {
@@ -86,7 +91,7 @@ export function DataTable<TData, TValue>({
             pageIndex: externalPageIndex ?? 0,
             pageSize: externalPageSize ?? 10,
           }
-        : undefined,
+        : internalPagination,
     },
   });
 
@@ -211,7 +216,9 @@ export function DataTable<TData, TValue>({
           </Button>
           <span className="text-sm">
             Halaman{" "}
-            {(externalPageIndex ?? table.getState().pagination.pageIndex) + 1}
+            {(externalPageIndex ??
+              table.getState().pagination?.pageIndex ??
+              0) + 1}
             {pageCount !== undefined && ` dari ${pageCount}`}
           </span>
           <Button

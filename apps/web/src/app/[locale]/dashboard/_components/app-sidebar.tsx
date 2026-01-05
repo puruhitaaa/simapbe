@@ -181,7 +181,6 @@ export function AppSidebar({ user }: { user: User }) {
                   <SidebarMenuButton
                     isActive={pathname.startsWith(item.url)}
                     render={<Link href={item.url} />}
-                    tooltip={item.description}
                   >
                     <item.icon className="size-4" />
                     <span>{item.title}</span>
@@ -202,7 +201,6 @@ export function AppSidebar({ user }: { user: User }) {
                   <SidebarMenuButton
                     isActive={pathname.startsWith(item.url)}
                     render={<Link href={item.url} />}
-                    tooltip={item.description}
                   >
                     <item.icon className="size-4" />
                     <span>{item.title}</span>

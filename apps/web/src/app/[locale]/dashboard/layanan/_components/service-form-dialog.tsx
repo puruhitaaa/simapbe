@@ -298,7 +298,17 @@ export function ServiceFormDialog({
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue>
+                          {(value: string) => {
+                            if (!value) return "Pilih Proses Bisnis";
+                            const selectedProbis = probisList?.items?.find(
+                              (probis) => probis.id === value
+                            );
+                            return selectedProbis
+                              ? `${selectedProbis.kodeProbismet} - ${selectedProbis.name}`
+                              : "Pilih Proses Bisnis";
+                          }}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {probisList?.items?.map((probis) => (
@@ -328,7 +338,17 @@ export function ServiceFormDialog({
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue>
+                          {(value: string) => {
+                            if (!value) return "Pilih Aplikasi";
+                            const selectedApp = appList?.items?.find(
+                              (app) => app.id === value
+                            );
+                            return selectedApp
+                              ? `${selectedApp.code} - ${selectedApp.name}`
+                              : "Pilih Aplikasi";
+                          }}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {appList?.items?.map((app) => (
