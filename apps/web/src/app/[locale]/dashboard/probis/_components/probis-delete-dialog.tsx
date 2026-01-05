@@ -43,9 +43,19 @@ export function ProbisDeleteDialog({
 
   const deleteMutation = useMutation({
     mutationFn: trpc.probis.delete.mutationOptions().mutationFn,
-    onMutate: async () => {
+    onMutate: async ({ id }) => {
       await queryClient.cancelQueries({ queryKey: [["probis"]] });
       const previousData = queryClient.getQueryData([["probis"]]);
+
+      queryClient.setQueriesData(
+        { queryKey: [["probis"]] },
+        (old: { items?: Array<{ id: string }> } | undefined) => {
+          if (!old?.items) {
+            return old;
+          }
+          return { ...old, items: old.items.filter((item) => item.id !== id) };
+        }
+      );
 
       onOpenChange(false);
       toast.success("Proses bisnis berhasil dihapus");

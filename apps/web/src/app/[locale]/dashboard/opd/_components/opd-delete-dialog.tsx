@@ -32,14 +32,33 @@ export function OpdDeleteDialog({
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
-    ...trpc.opd.delete.mutationOptions(),
-    onSuccess: () => {
-      toast.success("OPD berhasil dihapus");
-      queryClient.invalidateQueries({ queryKey: [["opd", "list"]] });
+    mutationFn: trpc.opd.delete.mutationOptions().mutationFn,
+    onMutate: async ({ id }) => {
+      await queryClient.cancelQueries({ queryKey: [["opd", "list"]] });
+      const previousData = queryClient.getQueryData([["opd", "list"]]);
+
+      queryClient.setQueriesData(
+        { queryKey: [["opd", "list"]] },
+        (old: { items?: Array<{ id: string }> } | undefined) => {
+          if (!old?.items) {
+            return old;
+          }
+          return { ...old, items: old.items.filter((item) => item.id !== id) };
+        }
+      );
+
       onOpenChange(false);
+      toast.success("OPD berhasil dihapus");
+      return { previousData };
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData([["opd", "list"]], context.previousData);
+      }
       toast.error(error.message || "Gagal menghapus OPD");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [["opd", "list"]] });
     },
   });
 

@@ -62,14 +62,42 @@ export function UserOpdDialog({
   }, [open, user]);
 
   const assignOpdMutation = useMutation({
-    ...trpc.user.assignOpd.mutationOptions(),
-    onSuccess: () => {
-      toast.success("OPD berhasil diassign");
-      queryClient.invalidateQueries({ queryKey: [["user", "list"]] });
+    mutationFn: trpc.user.assignOpd.mutationOptions().mutationFn,
+    onMutate: async ({ userId, opdId }) => {
+      await queryClient.cancelQueries({ queryKey: [["user", "list"]] });
+      const previousData = queryClient.getQueryData([["user", "list"]]);
+
+      queryClient.setQueriesData(
+        { queryKey: [["user", "list"]] },
+        (
+          old:
+            | { items?: Array<{ id: string; opdId: string | null }> }
+            | undefined
+        ) => {
+          if (!old?.items) {
+            return old;
+          }
+          return {
+            ...old,
+            items: old.items.map((item) =>
+              item.id === userId ? { ...item, opdId } : item
+            ),
+          };
+        }
+      );
+
       onOpenChange(false);
+      toast.success("OPD berhasil diassign");
+      return { previousData };
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData([["user", "list"]], context.previousData);
+      }
       toast.error(error.message || "Gagal assign OPD");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [["user", "list"]] });
     },
   });
 

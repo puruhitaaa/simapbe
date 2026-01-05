@@ -65,7 +65,7 @@ export function OpdFormDialog({
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<OpdFormData>({
     defaultValues: {
       code: "",
@@ -101,26 +101,75 @@ export function OpdFormDialog({
   }, [open, editData, reset]);
 
   const createMutation = useMutation({
-    ...trpc.opd.create.mutationOptions(),
-    onSuccess: () => {
-      toast.success("OPD berhasil ditambahkan");
-      queryClient.invalidateQueries({ queryKey: [["opd", "list"]] });
+    mutationFn: trpc.opd.create.mutationOptions().mutationFn,
+    onMutate: async (newData) => {
+      await queryClient.cancelQueries({ queryKey: [["opd", "list"]] });
+      const previousData = queryClient.getQueryData([["opd", "list"]]);
+
+      queryClient.setQueriesData(
+        { queryKey: [["opd", "list"]] },
+        (old: { items?: unknown[] } | undefined) => {
+          if (!old?.items) {
+            return old;
+          }
+          return {
+            ...old,
+            items: [
+              { id: `temp-${Date.now()}`, ...newData, createdAt: new Date() },
+              ...old.items,
+            ],
+          };
+        }
+      );
+
       onOpenChange(false);
+      toast.success("OPD berhasil ditambahkan");
+      return { previousData };
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData([["opd", "list"]], context.previousData);
+      }
       toast.error(error.message || "Gagal menambahkan OPD");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [["opd", "list"]] });
     },
   });
 
   const updateMutation = useMutation({
-    ...trpc.opd.update.mutationOptions(),
-    onSuccess: () => {
-      toast.success("OPD berhasil diperbarui");
-      queryClient.invalidateQueries({ queryKey: [["opd", "list"]] });
+    mutationFn: trpc.opd.update.mutationOptions().mutationFn,
+    onMutate: async (updatedData) => {
+      await queryClient.cancelQueries({ queryKey: [["opd", "list"]] });
+      const previousData = queryClient.getQueryData([["opd", "list"]]);
+
+      queryClient.setQueriesData(
+        { queryKey: [["opd", "list"]] },
+        (old: { items?: { id: string }[] } | undefined) => {
+          if (!old?.items) {
+            return old;
+          }
+          return {
+            ...old,
+            items: old.items.map((item) =>
+              item.id === updatedData.id ? { ...item, ...updatedData } : item
+            ),
+          };
+        }
+      );
+
       onOpenChange(false);
+      toast.success("OPD berhasil diperbarui");
+      return { previousData };
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData([["opd", "list"]], context.previousData);
+      }
       toast.error(error.message || "Gagal memperbarui OPD");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [["opd", "list"]] });
     },
   });
 
@@ -254,11 +303,9 @@ export function OpdFormDialog({
               Batal
             </DialogClose>
             <Button disabled={isPending} type="submit">
-              {isPending
-                ? "Menyimpan..."
-                : isEditing
-                  ? "Simpan Perubahan"
-                  : "Tambah OPD"}
+              {isPending && "Menyimpan..."}
+              {!isPending && isEditing && "Simpan Perubahan"}
+              {!(isPending || isEditing) && "Tambah OPD"}
             </Button>
           </DialogFooter>
         </form>

@@ -35,14 +35,36 @@ export function UserDeleteDialog({
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
-    ...trpc.user.delete.mutationOptions(),
-    onSuccess: () => {
-      toast.success("Pengguna berhasil dihapus");
-      queryClient.invalidateQueries({ queryKey: [["user", "list"]] });
+    mutationFn: trpc.user.delete.mutationOptions().mutationFn,
+    onMutate: async ({ userId }) => {
+      await queryClient.cancelQueries({ queryKey: [["user", "list"]] });
+      const previousData = queryClient.getQueryData([["user", "list"]]);
+
+      queryClient.setQueriesData(
+        { queryKey: [["user", "list"]] },
+        (old: { items?: Array<{ id: string }> } | undefined) => {
+          if (!old?.items) {
+            return old;
+          }
+          return {
+            ...old,
+            items: old.items.filter((item) => item.id !== userId),
+          };
+        }
+      );
+
       onOpenChange(false);
+      toast.success("Pengguna berhasil dihapus");
+      return { previousData };
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData([["user", "list"]], context.previousData);
+      }
       toast.error(error.message || "Gagal menghapus pengguna");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [["user", "list"]] });
     },
   });
 

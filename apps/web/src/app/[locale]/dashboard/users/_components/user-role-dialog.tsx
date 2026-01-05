@@ -73,14 +73,38 @@ export function UserRoleDialog({
   }, [open, user, reset]);
 
   const setRoleMutation = useMutation({
-    ...trpc.user.setRole.mutationOptions(),
-    onSuccess: () => {
-      toast.success("Role berhasil diperbarui");
-      queryClient.invalidateQueries({ queryKey: [["user", "list"]] });
+    mutationFn: trpc.user.setRole.mutationOptions().mutationFn,
+    onMutate: async ({ userId, role }) => {
+      await queryClient.cancelQueries({ queryKey: [["user", "list"]] });
+      const previousData = queryClient.getQueryData([["user", "list"]]);
+
+      queryClient.setQueriesData(
+        { queryKey: [["user", "list"]] },
+        (old: { items?: Array<{ id: string; role: string }> } | undefined) => {
+          if (!old?.items) {
+            return old;
+          }
+          return {
+            ...old,
+            items: old.items.map((item) =>
+              item.id === userId ? { ...item, role } : item
+            ),
+          };
+        }
+      );
+
       onOpenChange(false);
+      toast.success("Role berhasil diperbarui");
+      return { previousData };
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData([["user", "list"]], context.previousData);
+      }
       toast.error(error.message || "Gagal memperbarui role");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [["user", "list"]] });
     },
   });
 
