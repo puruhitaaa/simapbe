@@ -34,7 +34,7 @@ All database operations should be run from the server workspace:
 - `bun run db:generate` - Generate Prisma files
 - `bun run db:migrate` - Run database migrations
 
-Database schema is located in `packages/db/prisma/schema.prisma`
+Database schema is located in `packages/db/prisma/schema/` (Multi-file schema)
 
 ## API Structure
 
