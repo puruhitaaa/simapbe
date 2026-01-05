@@ -1,0 +1,27 @@
+{
+  "name": "@simapbe/api",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@prisma/client": "catalog:",
+    "@simapbe/auth": "workspace:*",
+    "@simapbe/db": "workspace:*",
+    "@simapbe/env": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@simapbe/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
