@@ -13,7 +13,7 @@ import {
   Shield,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+
+const classificationValues = ["PUBLIC", "RESTRICTED", "SECRET"] as const;
 
 // Type for Data Standard from the API
 interface DataStandard {
@@ -64,19 +66,16 @@ export function DataStandardTable({
   onDelete,
   onValidate,
 }: DataTableComponentProps) {
-  const [search, setSearch] = useState("");
-  const [classificationFilter, setClassificationFilter] = useState<
-    string | undefined
-  >();
+  const [search, setSearch] = useQueryState("q");
+  const [classificationFilter, setClassificationFilter] = useQueryState(
+    "classification",
+    parseAsStringLiteral(classificationValues)
+  );
 
   const { data, isLoading } = useQuery({
     ...trpc.data.list.queryOptions({
       search: search || undefined,
-      classification: classificationFilter as
-        | "PUBLIC"
-        | "RESTRICTED"
-        | "SECRET"
-        | undefined,
+      classification: classificationFilter || undefined,
       limit: 100,
     }),
   });
@@ -225,7 +224,7 @@ export function DataStandardTable({
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <Button
-          onClick={() => setClassificationFilter(undefined)}
+          onClick={() => setClassificationFilter(null)}
           size="sm"
           variant={classificationFilter ? "outline" : "default"}
         >
@@ -237,7 +236,11 @@ export function DataStandardTable({
             <Button
               className="gap-1"
               key={key}
-              onClick={() => setClassificationFilter(key)}
+              onClick={() =>
+                setClassificationFilter(
+                  key as (typeof classificationValues)[number]
+                )
+              }
               size="sm"
               variant={classificationFilter === key ? "default" : "outline"}
             >

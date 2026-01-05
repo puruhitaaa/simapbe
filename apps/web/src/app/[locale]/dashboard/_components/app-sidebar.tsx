@@ -251,7 +251,10 @@ export function AppSidebar({ user }: { user: User }) {
                   Pengaturan
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
+                <DropdownMenuItem
+                  className="bg-destructive text-white hover:bg-destructive/80!"
+                  onClick={handleSignOut}
+                >
                   Keluar
                 </DropdownMenuItem>
               </DropdownMenuContent>

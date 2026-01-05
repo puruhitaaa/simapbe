@@ -168,32 +168,41 @@ export function BudgetView() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer height={300} width="100%">
-              <BarChart data={yearChartData}>
-                <CartesianGrid className="stroke-muted" strokeDasharray="3 3" />
-                <XAxis
-                  className="text-muted-foreground"
-                  dataKey="name"
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis
-                  className="text-muted-foreground"
-                  tick={{ fontSize: 10 }}
-                  tickFormatter={(value) => formatCurrency(value)}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--popover))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "var(--radius)",
-                  }}
-                  formatter={(value) => formatCurrency(Number(value))}
-                  labelFormatter={(label) => `Tahun ${label}`}
-                />
-                <Legend />
-                <Bar dataKey="Anggaran" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer height={300} width="100%">
+                <BarChart data={yearChartData}>
+                  <CartesianGrid
+                    className="stroke-muted"
+                    strokeDasharray="3 3"
+                  />
+                  <XAxis
+                    className="text-muted-foreground"
+                    dataKey="name"
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis
+                    className="text-muted-foreground"
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={(value) => formatCurrency(value)}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--popover))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "var(--radius)",
+                    }}
+                    formatter={(value) => formatCurrency(Number(value))}
+                    labelFormatter={(label) => `Tahun ${label}`}
+                  />
+                  <Legend />
+                  <Bar
+                    dataKey="Anggaran"
+                    fill="#3b82f6"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -206,37 +215,39 @@ export function BudgetView() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer height={300} width="100%">
-              <PieChart>
-                <Pie
-                  cx="50%"
-                  cy="50%"
-                  data={domainChartData}
-                  dataKey="value"
-                  fill="#8884d8"
-                  label={({ name, percent }) =>
-                    `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-                  }
-                  labelLine={false}
-                  outerRadius={100}
-                >
-                  {domainChartData.map((entry) => (
-                    <Cell
-                      fill={DOMAIN_COLORS[entry.domain] ?? "#94a3b8"}
-                      key={`cell-${entry.domain}`}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--popover))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "var(--radius)",
-                  }}
-                  formatter={(value) => formatCurrency(Number(value))}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer height={300} width="100%">
+                <PieChart>
+                  <Pie
+                    cx="50%"
+                    cy="50%"
+                    data={domainChartData}
+                    dataKey="value"
+                    fill="#8884d8"
+                    label={({ name, percent }) =>
+                      `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+                    }
+                    labelLine={false}
+                    outerRadius={100}
+                  >
+                    {domainChartData.map((entry) => (
+                      <Cell
+                        fill={DOMAIN_COLORS[entry.domain] ?? "#94a3b8"}
+                        key={`cell-${entry.domain}`}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--popover))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "var(--radius)",
+                    }}
+                    formatter={(value) => formatCurrency(Number(value))}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </div>

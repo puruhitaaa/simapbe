@@ -22,7 +22,7 @@ export function DomainPageShell({
   actions,
 }: DomainPageShellProps) {
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="font-bold text-3xl tracking-tight">{title}</h1>

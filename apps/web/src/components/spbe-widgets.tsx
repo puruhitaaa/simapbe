@@ -71,7 +71,7 @@ export function SpbeIndexGauge({
       </CardHeader>
       <CardContent>
         <div className="relative h-[180px]">
-          <ResponsiveContainer height="100%" width="100%">
+          <ResponsiveContainer height={180} width="100%">
             <PieChart>
               <Pie
                 cx="50%"
@@ -92,12 +92,12 @@ export function SpbeIndexGauge({
           </ResponsiveContainer>
           <div className="absolute inset-0 flex flex-col items-center justify-center pt-8">
             <span
-              className="font-bold text-4xl"
+              className="font-bold text-3xl"
               style={{ color: getColor(value) }}
             >
               {value.toFixed(2)}
             </span>
-            <span className="text-muted-foreground text-sm">
+            <span className="text-muted-foreground text-xs">
               dari {maxValue.toFixed(1)}
             </span>
             <span
@@ -157,31 +157,33 @@ export function MaturityLevelChart({
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer height={200} width="100%">
-          <BarChart data={chartData} layout="vertical">
-            <CartesianGrid className="stroke-muted" strokeDasharray="3 3" />
-            <XAxis domain={[0, 5]} tick={{ fontSize: 12 }} type="number" />
-            <YAxis
-              dataKey="domain"
-              tick={{ fontSize: 11 }}
-              type="category"
-              width={100}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "var(--radius)",
-              }}
-              formatter={(value) => [`Level ${value}`, "Kematangan"]}
-            />
-            <Bar dataKey="level" radius={[0, 4, 4, 0]}>
-              {chartData.map((entry, index) => (
-                <Cell fill={entry.fill} key={`cell-${index}`} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="h-[200px] w-full">
+          <ResponsiveContainer height={200} width="100%">
+            <BarChart data={chartData} layout="vertical">
+              <CartesianGrid className="stroke-muted" strokeDasharray="3 3" />
+              <XAxis domain={[0, 5]} tick={{ fontSize: 12 }} type="number" />
+              <YAxis
+                dataKey="domain"
+                tick={{ fontSize: 10 }}
+                type="category"
+                width={80}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--popover))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "var(--radius)",
+                }}
+                formatter={(value) => [`Level ${value}`, "Kematangan"]}
+              />
+              <Bar dataKey="level" radius={[0, 4, 4, 0]}>
+                {chartData.map((entry, index) => (
+                  <Cell fill={entry.fill} key={`cell-${index}`} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
         {/* Legend */}
         <div className="mt-4 flex flex-wrap justify-center gap-3">
           {[
@@ -241,23 +243,25 @@ export function DomainProgressWidget({
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer height={200} width="100%">
-          <BarChart data={chartData}>
-            <CartesianGrid className="stroke-muted" strokeDasharray="3 3" />
-            <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "var(--radius)",
-              }}
-            />
-            <Legend />
-            <Bar dataKey="Realisasi" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Target" fill="#e2e8f0" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="h-[200px] w-full">
+          <ResponsiveContainer height={200} width="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid className="stroke-muted" strokeDasharray="3 3" />
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--popover))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "var(--radius)",
+                }}
+              />
+              <Legend />
+              <Bar dataKey="Realisasi" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Target" fill="#e2e8f0" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );
@@ -299,7 +303,7 @@ export function CompletionRateWidget({
       </CardHeader>
       <CardContent>
         <div className="relative h-[180px]">
-          <ResponsiveContainer height="100%" width="100%">
+          <ResponsiveContainer height={180} width="100%">
             <RadialBarChart
               cx="50%"
               cy="50%"

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { AlertTriangle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { trpc } from "@/utils/trpc";
 
-type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+const riskLevels = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
+type RiskLevel = (typeof riskLevels)[number];
 
 interface RiskRegister {
   id: string;
@@ -82,8 +83,11 @@ function calculateRiskScore(
 }
 
 export function RiskTable({ onEdit, onDelete }: RiskTableProps) {
-  const [search, setSearch] = useState("");
-  const [impactFilter, setImpactFilter] = useState<RiskLevel | null>(null);
+  const [search, setSearch] = useQueryState("riskSearch");
+  const [impactFilter, setImpactFilter] = useQueryState(
+    "impact",
+    parseAsStringLiteral(riskLevels)
+  );
 
   const { data, isLoading } = useQuery({
     ...trpc.security.listRisks.queryOptions({

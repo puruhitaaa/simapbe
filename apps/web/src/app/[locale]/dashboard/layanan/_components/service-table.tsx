@@ -12,7 +12,7 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { trpc } from "@/utils/trpc";
 
-type ServiceType = "G2C" | "G2B" | "G2G" | "G2E";
+const serviceTypes = ["G2C", "G2B", "G2G", "G2E"] as const;
+type ServiceType = (typeof serviceTypes)[number];
 
 interface Service {
   id: string;
@@ -95,8 +96,11 @@ const typeConfig: Record<
 };
 
 export function ServiceTable({ onEdit, onDelete }: ServiceTableProps) {
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<ServiceType | null>(null);
+  const [search, setSearch] = useQueryState("q");
+  const [typeFilter, setTypeFilter] = useQueryState(
+    "type",
+    parseAsStringLiteral(serviceTypes)
+  );
 
   const { data, isLoading } = useQuery({
     ...trpc.service.list.queryOptions({

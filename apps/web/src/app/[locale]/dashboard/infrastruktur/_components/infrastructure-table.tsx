@@ -11,7 +11,7 @@ import {
   Server,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -23,13 +23,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { trpc } from "@/utils/trpc";
 
-type InfraType =
-  | "SERVER_PHYSICAL"
-  | "VIRTUAL_MACHINE"
-  | "CLOUD_SaaS"
-  | "CLOUD_IaaS"
-  | "NETWORK_DEVICE";
-type LocationType = "PDN" | "LOCAL";
+const infraTypes = [
+  "SERVER_PHYSICAL",
+  "VIRTUAL_MACHINE",
+  "CLOUD_SaaS",
+  "CLOUD_IaaS",
+  "NETWORK_DEVICE",
+] as const;
+const locationTypes = ["PDN", "LOCAL"] as const;
+
+type InfraType = (typeof infraTypes)[number];
+type LocationType = (typeof locationTypes)[number];
 
 interface Infrastructure {
   id: string;
@@ -81,10 +85,14 @@ export function InfrastructureTable({
   onEdit,
   onDelete,
 }: InfrastructureTableProps) {
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<InfraType | null>(null);
-  const [locationFilter, setLocationFilter] = useState<LocationType | null>(
-    null
+  const [search, setSearch] = useQueryState("q");
+  const [typeFilter, setTypeFilter] = useQueryState(
+    "type",
+    parseAsStringLiteral(infraTypes)
+  );
+  const [locationFilter, setLocationFilter] = useQueryState(
+    "location",
+    parseAsStringLiteral(locationTypes)
   );
 
   const { data, isLoading } = useQuery({

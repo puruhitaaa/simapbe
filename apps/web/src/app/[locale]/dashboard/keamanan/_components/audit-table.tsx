@@ -10,7 +10,7 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -22,7 +22,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { trpc } from "@/utils/trpc";
 
-type AuditStatus = "PENDING" | "PASSED" | "FAILED_REMEDIATION_REQUIRED";
+const auditStatuses = [
+  "PENDING",
+  "PASSED",
+  "FAILED_REMEDIATION_REQUIRED",
+] as const;
+type AuditStatus = (typeof auditStatuses)[number];
 
 interface SecurityAudit {
   id: string;
@@ -75,8 +80,11 @@ const statusConfig: Record<
 };
 
 export function AuditTable({ onEdit, onDelete }: AuditTableProps) {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<AuditStatus | null>(null);
+  const [search, setSearch] = useQueryState("auditSearch");
+  const [statusFilter, setStatusFilter] = useQueryState(
+    "auditStatus",
+    parseAsStringLiteral(auditStatuses)
+  );
 
   const { data, isLoading } = useQuery({
     ...trpc.security.listAudits.queryOptions({

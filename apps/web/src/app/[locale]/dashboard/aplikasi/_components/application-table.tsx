@@ -14,7 +14,7 @@ import {
   Trash2,
   Wrench,
 } from "lucide-react";
-import { useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -63,14 +63,19 @@ interface ApplicationTableProps {
   onDelete: (app: Application) => void;
 }
 
+const statusValues = ["PLANNING", "DEVELOPMENT", "ACTIVE", "ARCHIVED"] as const;
+
 export function ApplicationTable({ onEdit, onDelete }: ApplicationTableProps) {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string | undefined>();
+  const [search, setSearch] = useQueryState("q");
+  const [statusFilter, setStatusFilter] = useQueryState(
+    "status",
+    parseAsStringLiteral(statusValues)
+  );
 
   const { data, isLoading } = useQuery({
     ...trpc.app.list.queryOptions({
       search: search || undefined,
-      status: statusFilter as Application["status"] | undefined,
+      status: statusFilter || undefined,
       limit: 100,
     }),
   });
@@ -238,7 +243,7 @@ export function ApplicationTable({ onEdit, onDelete }: ApplicationTableProps) {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <Button
-          onClick={() => setStatusFilter(undefined)}
+          onClick={() => setStatusFilter(null)}
           size="sm"
           variant={statusFilter ? "outline" : "default"}
         >
@@ -250,7 +255,9 @@ export function ApplicationTable({ onEdit, onDelete }: ApplicationTableProps) {
             <Button
               className="gap-1"
               key={key}
-              onClick={() => setStatusFilter(key)}
+              onClick={() =>
+                setStatusFilter(key as (typeof statusValues)[number])
+              }
               size="sm"
               variant={statusFilter === key ? "default" : "outline"}
             >

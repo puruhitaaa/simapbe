@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, Plus, Shield } from "lucide-react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +12,8 @@ import { AuditTable } from "./_components/audit-table";
 import { RiskDeleteDialog } from "./_components/risk-delete-dialog";
 import { RiskFormDialog } from "./_components/risk-form-dialog";
 import { RiskTable } from "./_components/risk-table";
+
+const tabValues = ["risks", "audits"] as const;
 
 type RiskData = {
   id: string;
@@ -46,7 +49,10 @@ type AuditData = {
 };
 
 export default function KeamananPage() {
-  const [activeTab, setActiveTab] = useState("risks");
+  const [activeTab, setActiveTab] = useQueryState(
+    "tab",
+    parseAsStringLiteral(tabValues).withDefault("risks")
+  );
   const [showRiskDialog, setShowRiskDialog] = useState(false);
   const [showRiskDeleteDialog, setShowRiskDeleteDialog] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState<RiskData | null>(null);
@@ -112,7 +118,11 @@ export default function KeamananPage() {
       description="Domain 6 - Audit Keamanan TIK dan Manajemen Risiko"
       title="Keamanan"
     >
-      <Tabs className="w-full" onValueChange={setActiveTab} value={activeTab}>
+      <Tabs
+        className="w-full"
+        onValueChange={(value) => setActiveTab(value as "risks" | "audits")}
+        value={activeTab}
+      >
         <TabsList className="mb-4">
           <TabsTrigger className="flex items-center gap-2" value="risks">
             <AlertTriangle className="h-4 w-4" />

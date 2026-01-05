@@ -10,7 +10,7 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useQueryState } from "nuqs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -47,7 +47,7 @@ interface OpdTableProps {
 }
 
 export function OpdTable({ onEdit, onDelete }: OpdTableProps) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useQueryState("q");
 
   const { data, isLoading } = useQuery({
     ...trpc.opd.list.queryOptions({ search: search || undefined, limit: 100 }),

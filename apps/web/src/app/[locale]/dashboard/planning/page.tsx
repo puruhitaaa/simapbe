@@ -7,7 +7,7 @@ import {
   GitCompareArrows,
   Plus,
 } from "lucide-react";
-import { useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,10 +16,14 @@ import { BudgetView } from "./_components/budget-view";
 import { GanttChart } from "./_components/gantt-chart";
 import { GapAnalysis } from "./_components/gap-analysis";
 
-type TabValue = "roadmap" | "gap-analysis" | "budget";
+const tabValues = ["roadmap", "gap-analysis", "budget"] as const;
+type TabValue = (typeof tabValues)[number];
 
 export default function PlanningPage() {
-  const [activeTab, setActiveTab] = useState<TabValue>("roadmap");
+  const [activeTab, setActiveTab] = useQueryState(
+    "tab",
+    parseAsStringLiteral(tabValues).withDefault("roadmap")
+  );
 
   return (
     <DomainPageShell

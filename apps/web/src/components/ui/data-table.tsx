@@ -105,7 +105,7 @@ export function DataTable<TData, TValue>({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {/* Search */}
       {(searchKey || onSearchChange) && (
         <div className="flex items-center gap-2">
@@ -122,7 +122,7 @@ export function DataTable<TData, TValue>({
       )}
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -186,7 +186,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-muted-foreground text-sm">
           {table.getFilteredSelectedRowModel().rows.length > 0 && (
             <span>
@@ -195,7 +195,7 @@ export function DataTable<TData, TValue>({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             disabled={!table.getCanPreviousPage()}
             onClick={() => {

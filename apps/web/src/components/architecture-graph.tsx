@@ -92,7 +92,8 @@ function DomainNode({ data }: NodeProps<Node<DomainNodeData>>) {
       style={{
         backgroundColor: config.bgColor,
         borderColor: config.borderColor,
-        minWidth: "160px",
+        minWidth: "140px",
+        maxWidth: "200px",
       }}
     >
       <Handle
@@ -282,7 +283,10 @@ export function ArchitectureGraph({
   }, []);
 
   return (
-    <div className="w-full rounded-lg border bg-background" style={{ height }}>
+    <div
+      className="w-full max-w-full overflow-hidden rounded-lg border bg-background"
+      style={{ height }}
+    >
       <ReactFlow
         attributionPosition="bottom-left"
         edges={edges}

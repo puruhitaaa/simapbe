@@ -183,7 +183,7 @@ export function GanttChart({
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-w-0 max-w-full">
         <div className="overflow-x-auto">
           <Gantt
             barBackgroundColor="#e2e8f0"
