@@ -42,11 +42,11 @@ const createDataStandardSchema = z.object({
   validityPeriod: z.string().min(1, "Validity period is required"), // Annual, Monthly, etc.
   updateFrequency: z.string().optional(),
   classification: dataClassEnum.default("PUBLIC"),
-  producerOpdId: z.string().cuid().optional(),
+  producerOpdId: z.cuid().optional(),
 });
 
 const updateDataStandardSchema = z.object({
-  id: z.string().cuid(),
+  id: z.cuid(),
   dataName: z.string().min(3).optional(),
   description: z.string().optional(),
   format: z.string().optional(),
@@ -69,7 +69,7 @@ export const dataRouter = router({
         .object({
           search: z.string().optional(),
           classification: dataClassEnum.optional(),
-          producerOpdId: z.string().cuid().optional(),
+          producerOpdId: z.cuid().optional(),
           isValidated: z.boolean().optional(),
           limit: z.number().min(1).max(100).default(50),
           cursor: z.string().optional(),
@@ -127,7 +127,7 @@ export const dataRouter = router({
    * Get single data standard by ID
    */
   getById: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .query(async ({ input }) => {
       const dataStandard = await prisma.dataStandard.findUnique({
         where: { id: input.id },
@@ -244,7 +244,7 @@ export const dataRouter = router({
   validateMetadata: adminProcedure
     .input(
       z.object({
-        id: z.string().cuid(),
+        id: z.cuid(),
         approve: z.boolean(),
         notes: z.string().optional(),
       })
@@ -345,7 +345,7 @@ export const dataRouter = router({
    * Access: SUPER_ADMIN only
    */
   delete: adminProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .mutation(async ({ input }) => {
       const { id } = input;
 

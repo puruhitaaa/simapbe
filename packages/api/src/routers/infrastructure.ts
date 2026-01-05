@@ -53,11 +53,11 @@ const createInfraSchema = z.object({
   ramGB: z.number().int().min(0).optional(),
   storageGB: z.number().int().min(0).optional(),
   ipAddress: z.string().optional(),
-  opdId: z.string().cuid(),
+  opdId: z.cuid(),
 });
 
 const updateInfraSchema = z.object({
-  id: z.string().cuid(),
+  id: z.cuid(),
   name: z.string().min(3).optional(),
   description: z.string().optional(),
   type: infraTypeEnum.optional(),
@@ -83,7 +83,7 @@ export const infraRouter = router({
       z
         .object({
           search: z.string().optional(),
-          opdId: z.string().cuid().optional(),
+          opdId: z.cuid().optional(),
           type: infraTypeEnum.optional(),
           location: locationEnum.optional(),
           isActive: z.boolean().optional(),
@@ -152,7 +152,7 @@ export const infraRouter = router({
    * Get single infrastructure with full details
    */
   getById: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .query(async ({ input }) => {
       const infra = await prisma.infrastructure.findUnique({
         where: { id: input.id },
@@ -277,7 +277,7 @@ export const infraRouter = router({
    * Delete infrastructure asset
    */
   delete: adminProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .mutation(async ({ input }) => {
       const { id } = input;
 

@@ -11,6 +11,7 @@ import {
   Server,
   TrendingUp,
 } from "lucide-react";
+import { useMemo } from "react";
 import { ArchitectureGraph } from "@/components/architecture-graph";
 import {
   CompletionRateWidget,
@@ -152,24 +153,130 @@ function DomainCard({
 }
 
 export function DashboardOverview() {
-  // Fetch statistics - these will be implemented when we have the API ready
-  // Note: For now we fetch a list and count items. A dedicated count endpoint could be added later.
-  const opdCount = useQuery({
-    ...trpc.opd.list.queryOptions({ limit: 100 }),
-    select: (data) => data.items.length,
-  });
+  // Fetch OPD stats
+  const opdStats = useQuery(trpc.opd.getStats.queryOptions());
 
+  // Fetch planning stats
   const planningStats = useQuery(trpc.planning.getStats.queryOptions());
 
-  // Sample maturity data - in production this would come from an API
-  const maturityData = [
-    { domain: "Proses Bisnis", level: 3 },
-    { domain: "Data", level: 4 },
-    { domain: "Layanan", level: 3 },
-    { domain: "Aplikasi", level: 4 },
-    { domain: "Infrastruktur", level: 3 },
-    { domain: "Keamanan", level: 2 },
-  ];
+  // Fetch application stats
+  const appStats = useQuery(trpc.app.getStats.queryOptions());
+
+  // Fetch service stats
+  const serviceStats = useQuery(trpc.service.getStats.queryOptions());
+
+  // Fetch integration status for integration score
+  const integrationStatus = useQuery(
+    trpc.service.getIntegrationStatus.queryOptions()
+  );
+
+  // Fetch gap analysis for maturity calculation
+  const gapAnalysis = useQuery(trpc.planning.getGapAnalysis.queryOptions());
+
+  // Calculate active applications count
+  const activeAppsCount =
+    appStats.data?.byStatus.find((s) => s.status === "ACTIVE")?.count ?? 0;
+
+  // Calculate active services count
+  const activeServicesCount = serviceStats.data?.active ?? 0;
+
+  // Integration score percentage
+  const integrationScore = integrationStatus.data?.integrationRate ?? 0;
+
+  // Calculate SPBE Index based on available metrics (weighted average)
+  const spbeIndex = useMemo(() => {
+    if (!(gapAnalysis.data && integrationStatus.data)) {
+      return 0;
+    }
+
+    const { currentState, gaps } = gapAnalysis.data;
+    const total =
+      currentState.applications +
+      currentState.services +
+      currentState.infrastructure;
+
+    if (total === 0) {
+      return 0;
+    }
+
+    // Score based on: integration rate + reduced gaps
+    const gapPenalty =
+      (gaps.appsWithoutService +
+        gaps.servicesWithoutProbis +
+        gaps.appsWithoutRecentAudit) /
+      Math.max(total, 1);
+
+    const baseScore = (integrationStatus.data.integrationRate / 100) * 5;
+    const adjustedScore = Math.max(0, baseScore - gapPenalty);
+
+    return Math.min(5, Math.max(0, adjustedScore));
+  }, [gapAnalysis.data, integrationStatus.data]);
+
+  // Calculate maturity levels based on real data
+  const maturityData = useMemo(() => {
+    if (!gapAnalysis.data) {
+      return [
+        { domain: "Proses Bisnis", level: 1 },
+        { domain: "Data", level: 1 },
+        { domain: "Layanan", level: 1 },
+        { domain: "Aplikasi", level: 1 },
+        { domain: "Infrastruktur", level: 1 },
+        { domain: "Keamanan", level: 1 },
+      ];
+    }
+
+    const { currentState, gaps } = gapAnalysis.data;
+
+    // Helper to calculate level (1-5) based on count and gaps
+    const calcLevel = (count: number, hasGap: boolean): number => {
+      if (count === 0) {
+        return 1;
+      }
+      if (count < 5) {
+        return hasGap ? 2 : 3;
+      }
+      if (count < 20) {
+        return hasGap ? 3 : 4;
+      }
+      return hasGap ? 4 : 5;
+    };
+
+    return [
+      {
+        domain: "Proses Bisnis",
+        level: calcLevel(
+          currentState.businessProcesses,
+          gaps.servicesWithoutProbis > 0
+        ),
+      },
+      {
+        domain: "Data",
+        level: calcLevel(currentState.dataStandards, false),
+      },
+      {
+        domain: "Layanan",
+        level: calcLevel(currentState.services, gaps.servicesWithoutProbis > 0),
+      },
+      {
+        domain: "Aplikasi",
+        level: calcLevel(
+          currentState.applications,
+          gaps.appsWithoutService > 0
+        ),
+      },
+      {
+        domain: "Infrastruktur",
+        level: calcLevel(currentState.infrastructure, false),
+      },
+      {
+        domain: "Keamanan",
+        level: calcLevel(
+          currentState.applications - gaps.appsWithoutRecentAudit,
+          gaps.appsWithoutRecentAudit > 0
+        ),
+      },
+    ];
+  }, [gapAnalysis.data]);
 
   return (
     <div className="space-y-6">
@@ -187,25 +294,25 @@ export function DashboardOverview() {
           description="Organisasi Perangkat Daerah"
           icon={Building2}
           title="Total OPD"
-          value={opdCount.isLoading ? "..." : (opdCount.data ?? 0)}
+          value={opdStats.isLoading ? "..." : (opdStats.data?.opdCount ?? 0)}
         />
         <StatCard
           description="Dalam status produksi"
           icon={LayoutDashboard}
           title="Aplikasi Aktif"
-          value="—"
+          value={appStats.isLoading ? "..." : activeAppsCount}
         />
         <StatCard
           description="Layanan digital aktif"
           icon={Network}
           title="Layanan Publik"
-          value="—"
+          value={serviceStats.isLoading ? "..." : activeServicesCount}
         />
         <StatCard
           description="Keterpaduan arsitektur"
           icon={TrendingUp}
           title="Skor Integrasi"
-          value="—"
+          value={integrationStatus.isLoading ? "..." : `${integrationScore}%`}
         />
       </div>
 
@@ -241,7 +348,7 @@ export function DashboardOverview() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <SpbeIndexGauge
             description="Nilai indeks SPBE Kota Bandung 2025"
-            value={3.45}
+            value={spbeIndex}
           />
           <CompletionRateWidget
             completed={planningStats.data?.byStatus.completed ?? 0}

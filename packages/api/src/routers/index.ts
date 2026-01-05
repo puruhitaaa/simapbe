@@ -23,6 +23,7 @@ import { probisRouter } from "./probis";
 import { securityRouter } from "./security";
 import { serviceRouter } from "./service";
 import { todoRouter } from "./todo";
+import { userRouter } from "./user";
 
 export const appRouter = router({
   // Health check
@@ -64,6 +65,9 @@ export const appRouter = router({
 
   // Planning Module (Peta Rencana + Gap Analysis)
   planning: planningRouter,
+
+  // User Management (RBAC)
+  user: userRouter,
 });
 
 export type AppRouter = typeof appRouter;

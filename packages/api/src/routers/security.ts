@@ -37,7 +37,7 @@ const auditStatusEnum = z.enum([
 ]);
 
 const createRiskSchema = z.object({
-  opdId: z.string().cuid(),
+  opdId: z.cuid(),
   riskCode: z
     .string()
     .min(3)
@@ -52,7 +52,7 @@ const createRiskSchema = z.object({
 });
 
 const updateRiskSchema = z.object({
-  id: z.string().cuid(),
+  id: z.cuid(),
   riskDescription: z.string().min(10).optional(),
   riskCategory: z.string().optional(),
   impactLevel: riskLevelEnum.optional(),
@@ -63,7 +63,7 @@ const updateRiskSchema = z.object({
 });
 
 const createAuditSchema = z.object({
-  appId: z.string().cuid(),
+  appId: z.cuid(),
   auditDate: z.coerce.date(),
   auditor: z.string().optional(),
   findings: z.string().optional(),
@@ -73,7 +73,7 @@ const createAuditSchema = z.object({
 });
 
 const updateAuditSchema = z.object({
-  id: z.string().cuid(),
+  id: z.cuid(),
   auditor: z.string().optional(),
   findings: z.string().optional(),
   recommendations: z.string().optional(),
@@ -115,7 +115,7 @@ export const securityRouter = router({
     .input(
       z
         .object({
-          opdId: z.string().cuid().optional(),
+          opdId: z.cuid().optional(),
           impactLevel: riskLevelEnum.optional(),
           limit: z.number().min(1).max(100).default(50),
           cursor: z.string().optional(),
@@ -171,7 +171,7 @@ export const securityRouter = router({
    * Get risk by ID
    */
   getRiskById: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .query(async ({ input }) => {
       const risk = await prisma.riskRegister.findUnique({
         where: { id: input.id },
@@ -309,7 +309,7 @@ export const securityRouter = router({
    * Delete risk
    */
   deleteRisk: adminProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .mutation(async ({ input }) => {
       const existing = await prisma.riskRegister.findUnique({
         where: { id: input.id },
@@ -385,7 +385,7 @@ export const securityRouter = router({
     .input(
       z
         .object({
-          appId: z.string().cuid().optional(),
+          appId: z.cuid().optional(),
           status: auditStatusEnum.optional(),
           fromDate: z.coerce.date().optional(),
           toDate: z.coerce.date().optional(),
@@ -444,7 +444,7 @@ export const securityRouter = router({
    * Get audit by ID
    */
   getAuditById: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .query(async ({ input }) => {
       const audit = await prisma.securityAudit.findUnique({
         where: { id: input.id },
@@ -532,7 +532,7 @@ export const securityRouter = router({
    * Delete security audit
    */
   deleteAudit: adminProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .mutation(async ({ input }) => {
       const existing = await prisma.securityAudit.findUnique({
         where: { id: input.id },
@@ -610,7 +610,7 @@ export const securityRouter = router({
     .input(
       z
         .object({
-          userId: z.string().cuid().optional(),
+          userId: z.cuid().optional(),
           entity: z.string().optional(),
           action: z.string().optional(),
           fromDate: z.coerce.date().optional(),

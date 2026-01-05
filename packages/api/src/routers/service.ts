@@ -42,23 +42,23 @@ const createServiceSchema = z.object({
   url: z.string().url().optional(),
   isActive: z.boolean().default(true),
   // Required links for Keterpaduan (Integration)
-  probisId: z.string().cuid({
+  probisId: z.cuid({
     message: "Business Process ID is required per SPBE regulation",
   }),
-  appId: z.string().cuid({
+  appId: z.cuid({
     message: "Application ID is required per SPBE regulation",
   }),
 });
 
 const updateServiceSchema = z.object({
-  id: z.string().cuid(),
+  id: z.cuid(),
   name: z.string().min(3).optional(),
   description: z.string().optional(),
   type: serviceTypeEnum.optional(),
   url: z.string().url().optional(),
   isActive: z.boolean().optional(),
-  probisId: z.string().cuid().optional(),
-  appId: z.string().cuid().optional(),
+  probisId: z.cuid().optional(),
+  appId: z.cuid().optional(),
 });
 
 // ============================================
@@ -147,7 +147,7 @@ export const serviceRouter = router({
    * Get single service with full details
    */
   getById: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .query(async ({ input }) => {
       const service = await prisma.service.findUnique({
         where: { id: input.id },
@@ -189,7 +189,7 @@ export const serviceRouter = router({
    * Service → Process → App → Data → Infra → Security
    */
   traceability: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .query(async ({ input }) => {
       const service = await prisma.service.findUnique({
         where: { id: input.id },
@@ -414,7 +414,7 @@ export const serviceRouter = router({
    * Delete service
    */
   delete: adminProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .mutation(async ({ input }) => {
       const { id } = input;
 

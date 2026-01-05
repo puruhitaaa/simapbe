@@ -48,11 +48,11 @@ const createAppSchema = z.object({
   framework: z.string().optional(),
   databaseType: z.string().optional(),
   repositoryUrl: z.string().url().optional(),
-  opdId: z.string().cuid(),
+  opdId: z.cuid(),
 });
 
 const updateAppSchema = z.object({
-  id: z.string().cuid(),
+  id: z.cuid(),
   name: z.string().min(3).optional(),
   description: z.string().optional(),
   type: appTypeEnum.optional(),
@@ -77,7 +77,7 @@ export const appRouter = router({
       z
         .object({
           search: z.string().optional(),
-          opdId: z.string().cuid().optional(),
+          opdId: z.cuid().optional(),
           type: appTypeEnum.optional(),
           status: statusEnum.optional(),
           platform: platformEnum.optional(),
@@ -152,7 +152,7 @@ export const appRouter = router({
    * Includes all relations for traceability
    */
   getById: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .query(async ({ input }) => {
       const app = await prisma.application.findUnique({
         where: { id: input.id },
@@ -422,7 +422,7 @@ export const appRouter = router({
    * Access: SUPER_ADMIN only
    */
   delete: adminProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .mutation(async ({ input }) => {
       const { id } = input;
 
@@ -468,8 +468,8 @@ export const appRouter = router({
   linkData: operatorProcedure
     .input(
       z.object({
-        appId: z.string().cuid(),
-        dataId: z.string().cuid(),
+        appId: z.cuid(),
+        dataId: z.cuid(),
         relationType: z.enum(["PRODUCER", "CONSUMER"]),
       })
     )
@@ -527,8 +527,8 @@ export const appRouter = router({
   linkInfrastructure: operatorProcedure
     .input(
       z.object({
-        appId: z.string().cuid(),
-        infraId: z.string().cuid(),
+        appId: z.cuid(),
+        infraId: z.cuid(),
         purpose: z.string().optional(),
       })
     )

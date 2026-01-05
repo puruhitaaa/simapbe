@@ -36,11 +36,11 @@ const createProbisSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().optional(),
   level: z.number().min(1).max(4),
-  parentId: z.string().cuid().optional(),
+  parentId: z.cuid().optional(),
 });
 
 const updateProbisSchema = z.object({
-  id: z.string().cuid(),
+  id: z.cuid(),
   name: z.string().min(3).optional(),
   description: z.string().optional(),
 });
@@ -87,7 +87,7 @@ export const probisRouter = router({
       z
         .object({
           level: z.number().min(1).max(4).optional(),
-          parentId: z.string().cuid().optional(),
+          parentId: z.cuid().optional(),
           search: z.string().optional(),
           limit: z.number().min(1).max(100).default(50),
           cursor: z.string().optional(),
@@ -137,7 +137,7 @@ export const probisRouter = router({
    * Get single process by ID with full details
    */
   getById: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .query(async ({ input }) => {
       const process = await prisma.businessProcess.findUnique({
         where: { id: input.id },
@@ -283,7 +283,7 @@ export const probisRouter = router({
    * Note: Cannot delete if has children or linked services
    */
   delete: adminProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .mutation(async ({ input }) => {
       const { id } = input;
 
@@ -331,8 +331,8 @@ export const probisRouter = router({
   linkService: adminProcedure
     .input(
       z.object({
-        processId: z.string().cuid(),
-        serviceId: z.string().cuid(),
+        processId: z.cuid(),
+        serviceId: z.cuid(),
       })
     )
     .mutation(async ({ input }) => {

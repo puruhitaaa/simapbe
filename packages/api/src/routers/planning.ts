@@ -61,7 +61,7 @@ const createPlanSchema = z.object({
 });
 
 const updatePlanSchema = z.object({
-  id: z.string().cuid(),
+  id: z.cuid(),
   quarter: z.number().int().min(1).max(4).optional(),
   initiativeName: z.string().min(5).optional(),
   description: z.string().optional(),
@@ -126,7 +126,7 @@ export const planningRouter = router({
    * Get plan by ID
    */
   getById: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .query(async ({ input }) => {
       const plan = await prisma.spbePlan.findUnique({
         where: { id: input.id },
@@ -214,7 +214,7 @@ export const planningRouter = router({
    * Delete plan
    */
   delete: adminProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .mutation(async ({ input }) => {
       const existing = await prisma.spbePlan.findUnique({
         where: { id: input.id },
@@ -240,7 +240,7 @@ export const planningRouter = router({
   updateStatus: adminProcedure
     .input(
       z.object({
-        id: z.string().cuid(),
+        id: z.cuid(),
         status: planStatusEnum,
       })
     )

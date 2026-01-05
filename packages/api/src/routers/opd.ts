@@ -34,11 +34,11 @@ const createOpdSchema = z.object({
   acronym: z.string().max(20).optional(),
   address: z.string().optional(),
   phone: z.string().optional(),
-  email: z.string().email("Invalid email format").optional(),
+  email: z.email("Invalid email format").optional(),
 });
 
 const updateOpdSchema = z.object({
-  id: z.string().cuid(),
+  id: z.cuid(),
   code: z
     .string()
     .min(2)
@@ -49,7 +49,7 @@ const updateOpdSchema = z.object({
   acronym: z.string().max(20).optional(),
   address: z.string().optional(),
   phone: z.string().optional(),
-  email: z.string().email().optional(),
+  email: z.email().optional(),
 });
 
 // ============================================
@@ -116,7 +116,7 @@ export const opdRouter = router({
    * Access: All authenticated users (Operators see only their own)
    */
   getById: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .query(async ({ input, ctx }) => {
       const { id } = input;
 
@@ -245,7 +245,7 @@ export const opdRouter = router({
    * Note: Will fail if OPD has related data (users, apps, etc.)
    */
   delete: adminProcedure
-    .input(z.object({ id: z.string().cuid() }))
+    .input(z.object({ id: z.cuid() }))
     .mutation(async ({ input }) => {
       const { id } = input;
 

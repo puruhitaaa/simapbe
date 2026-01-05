@@ -130,11 +130,11 @@ To ensure the "Keterpaduan" (Integration) mandated by regulation, strict validat
 export const ApplicationSchema = z.object({
   name: z.string().min(3),
   type: z.enum(['UMUM', 'KHUSUS']), // Mandatory distinction per Perpres 95 [Source 12]
-  opdId: z.string().cuid(),
+  opdId: z.cuid(),
   
   // Inter-domain dependencies (Critical for Architecture)
-  supportedProbisId: z.string().cuid().describe("Link to Business Process"),
-  consumedDataIds: z.array(z.string().cuid()).describe("Link to Data Standards"),
+  supportedProbisId: z.cuid().describe("Link to Business Process"),
+  consumedDataIds: z.array(z.cuid()).describe("Link to Data Standards"),
   
   // Security Compliance
   securityTestDate: z.date().optional().describe("Last Pentest Date"),

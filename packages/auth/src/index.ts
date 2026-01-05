@@ -51,8 +51,10 @@ export const auth = betterAuth({
   // Plugins
   plugins: [
     // Admin plugin for user management
+    // Only SUPER_ADMIN can perform admin operations (listUsers, setRole, etc.)
     admin({
       defaultRole: "OPERATOR",
+      adminRoles: ["SUPER_ADMIN"],
     }),
   ],
 });
