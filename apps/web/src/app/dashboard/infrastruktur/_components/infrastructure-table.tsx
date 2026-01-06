@@ -181,6 +181,9 @@ export function InfrastructureTable({
       header: "OPD",
       cell: ({ row }) => {
         const opd = row.original.opd;
+        if (!opd) {
+          return <span className="text-destructive text-sm">Missing OPD</span>;
+        }
         return (
           <span className="text-sm">
             {opd.acronym || opd.name.substring(0, 20)}
@@ -192,7 +195,7 @@ export function InfrastructureTable({
       id: "apps",
       header: "Aplikasi",
       cell: ({ row }) => {
-        const count = row.original._count.applications;
+        const count = row.original._count?.applications ?? 0;
         return (
           <span className="text-muted-foreground text-sm">
             {count} {count === 1 ? "app" : "apps"}

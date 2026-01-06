@@ -17,6 +17,7 @@ import prisma from "@simapbe/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../index";
+import { ExcelService } from "../services/excel-service";
 
 // ============================================
 // Input Schemas (Matching Prisma Schema)
@@ -573,4 +574,172 @@ export const planningRouter = router({
       },
     };
   }),
+
+  /**
+   * Download Excel Template
+   */
+  downloadTemplate: protectedProcedure
+    .input(
+      z.object({
+        columns: z.array(z.string()).min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const columnDefinitions = [
+        {
+          key: "planCode",
+          header: "Code (Unique)",
+          width: 25,
+          note: "Required. Format: PLAN-XXXX",
+        },
+        { key: "year", header: "Year", width: 10, note: "Required. 2020-2035" },
+        {
+          key: "initiativeName",
+          header: "Initiative Name",
+          width: 40,
+          note: "Required.",
+        },
+        {
+          key: "domain",
+          header: "Domain",
+          width: 20,
+          validation: {
+            type: "list",
+            formulae: [
+              '"PROSES_BISNIS,DATA,LAYANAN,APLIKASI,INFRASTRUKTUR,KEAMANAN"',
+            ],
+          },
+        },
+        { key: "budget", header: "Budget", width: 15 },
+        {
+          key: "status",
+          header: "Status",
+          width: 15,
+          validation: {
+            type: "list",
+            formulae: ['"PLANNED,BUDGETED,ONGOING,COMPLETED,DELAYED"'],
+          },
+        },
+        { key: "description", header: "Description", width: 50 },
+      ] as const;
+
+      const selectedColumns = columnDefinitions.filter((col) =>
+        input.columns.includes(col.key)
+      );
+
+      const buffer = await ExcelService.generateTemplate(selectedColumns);
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Export Data
+   */
+  export: protectedProcedure
+    .input(
+      z.object({
+        year: z.number().optional(),
+        domain: domainLayerEnum.optional(),
+        status: planStatusEnum.optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { year, domain, status } = input;
+
+      const plans = await prisma.spbePlan.findMany({
+        where: {
+          ...(year && { year }),
+          ...(domain && { domain }),
+          ...(status && { status }),
+        },
+        orderBy: [{ year: "asc" }, { priority: "asc" }],
+      });
+
+      const columns = [
+        { key: "planCode", header: "Code", width: 25 },
+        { key: "year", header: "Year", width: 10 },
+        { key: "initiativeName", header: "Initiative", width: 40 },
+        { key: "domain", header: "Domain", width: 20 },
+        { key: "budget", header: "Budget", width: 15 },
+        { key: "status", header: "Status", width: 15 },
+        { key: "description", header: "Description", width: 50 },
+      ];
+
+      const data = plans.map((p) => ({
+        ...p,
+        budget: p.budget?.toNumber() || 0,
+      }));
+
+      const buffer = await ExcelService.exportData(data, columns, "SPBE Plans");
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Import Data
+   */
+  import: adminProcedure
+    .input(z.object({ fileBase64: z.string() }))
+    .mutation(async ({ input }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+
+      const rowSchema = z.object({
+        "Code (Unique)": z.string().regex(/^PLAN-[A-Z0-9-]+$/),
+        Year: z.coerce.number().min(2020).max(2035),
+        "Initiative Name": z.string().min(5),
+        Domain: domainLayerEnum,
+        Budget: z.coerce.number().min(0).optional(),
+        Status: planStatusEnum.default("PLANNED"),
+        Description: z.string().optional(),
+      });
+
+      const columnMapping = {
+        "Code (Unique)": "Code (Unique)",
+        Year: "Year",
+        "Initiative Name": "Initiative Name",
+        Domain: "Domain",
+        Budget: "Budget",
+        Status: "Status",
+        Description: "Description",
+      };
+
+      const { success: rows, errors } = await ExcelService.parseExcel(
+        buffer,
+        rowSchema,
+        columnMapping
+      );
+      if (errors.length > 0)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Validation failed",
+          cause: errors,
+        });
+
+      return await prisma.$transaction(async (tx) => {
+        let inserted = 0;
+        let updated = 0;
+        for (const row of rows) {
+          const code = row["Code (Unique)"];
+          const data = {
+            planCode: code,
+            year: row.Year,
+            initiativeName: row["Initiative Name"],
+            domain: row.Domain as any,
+            budget: row.Budget,
+            status: row.Status as any,
+            description: row.Description,
+          };
+
+          const existing = await tx.spbePlan.findUnique({
+            where: { planCode: code },
+          });
+          if (existing) {
+            await tx.spbePlan.update({ where: { id: existing.id }, data });
+            updated++;
+          } else {
+            await tx.spbePlan.create({ data });
+            inserted++;
+          }
+        }
+        return { insertedCount: inserted, updatedCount: updated };
+      });
+    }),
 });

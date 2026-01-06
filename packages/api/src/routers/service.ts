@@ -23,6 +23,7 @@ import {
   protectedProcedure,
   router,
 } from "../index";
+import { ExcelService } from "../services/excel-service";
 
 // ============================================
 // Input Schemas (Matching Prisma Schema)
@@ -115,7 +116,12 @@ export const serviceRouter = router({
         orderBy: { name: "asc" },
         include: {
           businessProcess: {
-            select: { id: true, kodeProbismet: true, name: true, level: true },
+            select: {
+              id: true,
+              kodeProbismet: true,
+              name: true,
+              level: true,
+            },
           },
           application: {
             select: {
@@ -535,4 +541,207 @@ export const serviceRouter = router({
       byType: byType.map((t) => ({ type: t.type, count: t._count._all })),
     };
   }),
+
+  /**
+   * Download Excel Template
+   */
+  downloadTemplate: protectedProcedure
+    .input(
+      z.object({
+        columns: z.array(z.string()).min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const columnDefinitions = [
+        {
+          key: "code",
+          header: "Code (Unique)",
+          width: 25,
+          note: "Required. Format: SVC-XXXX",
+        },
+        { key: "name", header: "Name", width: 30, note: "Required." },
+        { key: "description", header: "Description", width: 40 },
+        {
+          key: "type",
+          header: "Type",
+          width: 15,
+          validation: { type: "list", formulae: ['"G2C,G2B,G2G,G2E"'] },
+        },
+        { key: "url", header: "URL", width: 30 },
+        {
+          key: "probisCode",
+          header: "Business Process Code",
+          width: 25,
+          note: "Required.",
+        },
+        {
+          key: "appCode",
+          header: "Application Code",
+          width: 25,
+          note: "Required.",
+        },
+      ] as const;
+
+      const selectedColumns = columnDefinitions.filter((col) =>
+        input.columns.includes(col.key)
+      );
+
+      const buffer = await ExcelService.generateTemplate(selectedColumns);
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Export Data
+   */
+  export: protectedProcedure
+    .input(
+      z.object({
+        type: serviceTypeEnum.optional(),
+        isActive: z.boolean().optional(),
+        search: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { type, isActive, search } = input;
+
+      const services = await prisma.service.findMany({
+        where: {
+          ...(type && { type }),
+          ...(isActive !== undefined && { isActive }),
+          ...(search && {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { code: { contains: search, mode: "insensitive" } },
+            ],
+          }),
+        },
+        include: {
+          businessProcess: { select: { kodeProbismet: true } },
+          application: { select: { code: true } },
+        },
+        orderBy: { name: "asc" },
+      });
+
+      const columns = [
+        { key: "code", header: "Code", width: 25 },
+        { key: "name", header: "Name", width: 30 },
+        { key: "description", header: "Description", width: 40 },
+        { key: "type", header: "Type", width: 15 },
+        { key: "url", header: "URL", width: 30 },
+        { key: "probisCode", header: "Probis", width: 25 },
+        { key: "appCode", header: "App", width: 25 },
+      ];
+
+      const data = services.map((s) => ({
+        ...s,
+        probisCode: s.businessProcess?.kodeProbismet,
+        appCode: s.application?.code,
+      }));
+
+      const buffer = await ExcelService.exportData(data, columns, "Services");
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Import Data
+   */
+  import: operatorProcedure
+    .input(z.object({ fileBase64: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+
+      const rowSchema = z.object({
+        "Code (Unique)": z.string().regex(/^SVC-[A-Z0-9-]+$/, "Invalid format"),
+        Name: z.string().min(3),
+        Description: z.string().optional(),
+        Type: serviceTypeEnum.default("G2C"),
+        URL: z.string().url().optional(),
+        "Business Process Code": z.string(),
+        "Application Code": z.string(),
+      });
+
+      const columnMapping = {
+        "Code (Unique)": "Code (Unique)",
+        Name: "Name",
+        Description: "Description",
+        Type: "Type",
+        URL: "URL",
+        "Business Process Code": "Business Process Code",
+        "Application Code": "Application Code",
+      };
+
+      const { success: rows, errors } = await ExcelService.parseExcel(
+        buffer,
+        rowSchema,
+        columnMapping
+      );
+
+      if (errors.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Validation failed for ${errors.length} rows.`,
+          cause: errors,
+        });
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        let inserted = 0;
+        let updated = 0;
+
+        for (const row of rows) {
+          const code = row["Code (Unique)"];
+          const probisCode = row["Business Process Code"];
+          const appCode = row["Application Code"];
+
+          const probis = await tx.businessProcess.findUnique({
+            where: { kodeProbismet: probisCode },
+          });
+          if (!probis)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Business Process '${probisCode}' not found`,
+            });
+
+          const app = await tx.application.findUnique({
+            where: { code: appCode },
+          });
+          if (!app)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Application '${appCode}' not found`,
+            });
+
+          if (ctx.user.role === "OPERATOR" && app.opdId !== ctx.user.opdId) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: `You cannot link service to app '${appCode}' from another OPD`,
+            });
+          }
+
+          const data = {
+            code,
+            name: row["Name"],
+            description: row["Description"],
+            type: row["Type"] as any,
+            url: row["URL"],
+            probisId: probis.id,
+            appId: app.id,
+            isActive: true,
+          };
+
+          const existing = await tx.service.findUnique({ where: { code } });
+
+          if (existing) {
+            await tx.service.update({ where: { id: existing.id }, data });
+            updated++;
+          } else {
+            await tx.service.create({ data });
+            inserted++;
+          }
+        }
+        return { insertedCount: inserted, updatedCount: updated };
+      });
+
+      return result;
+    }),
 });

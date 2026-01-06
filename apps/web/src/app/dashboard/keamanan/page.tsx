@@ -1,11 +1,15 @@
 "use client";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Plus, Shield } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { trpc } from "@/utils/trpc";
 import { DomainPageShell } from "../_components/domain-page-shell";
+import { ExcelDataActions } from "../_components/excel-data-actions";
 import { AuditDeleteDialog } from "./_components/audit-delete-dialog";
 import { AuditFormDialog } from "./_components/audit-form-dialog";
 import { AuditTable } from "./_components/audit-table";
@@ -48,11 +52,83 @@ type AuditData = {
   };
 };
 
+const riskColumns = [
+  { id: "riskCode", label: "Code (Unique)", required: true },
+  { id: "opdCode", label: "OPD Code", required: true },
+  { id: "riskDescription", label: "Description", required: true },
+  { id: "riskCategory", label: "Category" },
+  { id: "impactLevel", label: "Impact" },
+  { id: "likelihoodLevel", label: "Likelihood" },
+  { id: "mitigationPlan", label: "Mitigation" },
+  { id: "responsiblePerson", label: "PIC" },
+];
+
+const auditColumns = [
+  { id: "appCode", label: "App Code", required: true },
+  { id: "auditDate", label: "Date", required: true },
+  { id: "auditor", label: "Auditor" },
+  { id: "findings", label: "Findings" },
+  { id: "recommendations", label: "Recommendations" },
+  { id: "score", label: "Score" },
+  { id: "status", label: "Status" },
+];
+
 export default function KeamananPage() {
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
     parseAsStringLiteral(tabValues).withDefault("risks")
   );
+
+  const queryClient = useQueryClient();
+
+  const downloadTemplateMutation = useMutation({
+    mutationFn: trpc.security.downloadTemplate.mutationOptions().mutationFn,
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: trpc.security.export.mutationOptions().mutationFn,
+  });
+
+  const importMutation = useMutation({
+    mutationFn: trpc.security.import.mutationOptions().mutationFn,
+  });
+
+  const currentType = activeTab === "risks" ? "RISK" : "AUDIT";
+
+  const handleGenerateTemplate = async (columns: string[]) => {
+    const base64 = await downloadTemplateMutation.mutateAsync({
+      type: currentType,
+      columns,
+    });
+    const link = document.createElement("a");
+    link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`;
+    link.download = `template-${activeTab}.xlsx`;
+    link.click();
+    toast.success("Template berhasil didownload");
+  };
+
+  const handleExportData = async () => {
+    const base64 = await exportMutation.mutateAsync({ type: currentType });
+    const link = document.createElement("a");
+    link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`;
+    link.download = `data-${activeTab}.xlsx`;
+    link.click();
+    toast.success("Data berhasil diexport");
+  };
+
+  const handleImportData = async (fileBase64: string) => {
+    const result = await importMutation.mutateAsync({
+      fileBase64,
+      type: currentType,
+    });
+    if (activeTab === "risks") {
+      queryClient.invalidateQueries({ queryKey: [["security", "listRisks"]] });
+    } else {
+      queryClient.invalidateQueries({ queryKey: [["security", "listAudits"]] });
+    }
+    return result;
+  };
+
   const [showRiskDialog, setShowRiskDialog] = useState(false);
   const [showRiskDeleteDialog, setShowRiskDeleteDialog] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState<RiskData | null>(null);
@@ -105,6 +181,13 @@ export default function KeamananPage() {
     <DomainPageShell
       actions={
         <>
+          <ExcelDataActions
+            domainName={`Keamanan (${activeTab === "risks" ? "Risiko" : "Audit"})`}
+            onExportData={handleExportData}
+            onGenerateTemplate={handleGenerateTemplate}
+            onImportData={handleImportData}
+            templateColumns={activeTab === "risks" ? riskColumns : auditColumns}
+          />
           <Button onClick={() => setShowAuditDialog(true)} variant="outline">
             <Shield className="mr-2 h-4 w-4" />
             Tambah Audit

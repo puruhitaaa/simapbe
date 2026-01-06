@@ -1,11 +1,15 @@
 "use client";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { trpc } from "@/utils/trpc";
 import { DomainPageShell } from "../_components/domain-page-shell";
+import { ExcelDataActions } from "../_components/excel-data-actions";
 import { ProbisDeleteDialog } from "./_components/probis-delete-dialog";
 import { ProbisDetailPanel } from "./_components/probis-detail-panel";
 import { ProbisFormDialog } from "./_components/probis-form-dialog";
@@ -20,6 +24,14 @@ interface BusinessProcess {
   parentId: string | null;
 }
 
+const templateColumns = [
+  { id: "kodeProbismet", label: "Code (Unique)", required: true },
+  { id: "name", label: "Name", required: true },
+  { id: "description", label: "Description" },
+  { id: "level", label: "Level", required: true },
+  { id: "parentCode", label: "Parent Code" },
+];
+
 export default function ProbisPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -29,6 +41,45 @@ export default function ProbisPage() {
   const [editData, setEditData] = useState<BusinessProcess | null>(null);
   const [parentNode, setParentNode] = useState<BusinessProcess | null>(null);
   const [deleteNode, setDeleteNode] = useState<BusinessProcess | null>(null);
+
+  const queryClient = useQueryClient();
+
+  const downloadTemplateMutation = useMutation({
+    mutationFn: trpc.probis.downloadTemplate.mutationOptions().mutationFn,
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: trpc.probis.export.mutationOptions().mutationFn,
+  });
+
+  const importMutation = useMutation({
+    mutationFn: trpc.probis.import.mutationOptions().mutationFn,
+  });
+
+  const handleGenerateTemplate = async (columns: string[]) => {
+    const base64 = await downloadTemplateMutation.mutateAsync({ columns });
+    const link = document.createElement("a");
+    link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`;
+    link.download = "template-probis.xlsx";
+    link.click();
+    toast.success("Template berhasil didownload");
+  };
+
+  const handleExportData = async () => {
+    const base64 = await exportMutation.mutateAsync({});
+    const link = document.createElement("a");
+    link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`;
+    link.download = "data-probis.xlsx";
+    link.click();
+    toast.success("Data berhasil diexport");
+  };
+
+  const handleImportData = async (fileBase64: string) => {
+    const result = await importMutation.mutateAsync({ fileBase64 });
+    queryClient.invalidateQueries({ queryKey: [["probis", "getHierarchy"]] });
+    queryClient.invalidateQueries({ queryKey: [["probis", "list"]] });
+    return result;
+  };
 
   const handleAdd = () => {
     setEditData(null);
@@ -62,10 +113,19 @@ export default function ProbisPage() {
     <>
       <DomainPageShell
         actions={
-          <Button onClick={handleAdd}>
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Proses Bisnis
-          </Button>
+          <>
+            <ExcelDataActions
+              domainName="Proses Bisnis"
+              onExportData={handleExportData}
+              onGenerateTemplate={handleGenerateTemplate}
+              onImportData={handleImportData}
+              templateColumns={templateColumns}
+            />
+            <Button onClick={handleAdd}>
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah Proses Bisnis
+            </Button>
+          </>
         }
         description="Domain 1 - Arsitektur Proses Bisnis Pemerintah Kota Bandung"
         title="Proses Bisnis"

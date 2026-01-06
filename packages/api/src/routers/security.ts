@@ -24,6 +24,7 @@ import {
   protectedProcedure,
   router,
 } from "../index";
+import { ExcelService } from "../services/excel-service";
 
 // ============================================
 // Input Schemas (Matching Prisma Schema)
@@ -753,4 +754,334 @@ export const securityRouter = router({
       },
     };
   }),
+
+  /**
+   * Download Excel Template
+   */
+  downloadTemplate: protectedProcedure
+    .input(
+      z.object({
+        type: z.enum(["RISK", "AUDIT"]),
+        columns: z.array(z.string()).min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      let columnDefinitions: any[] = [];
+
+      if (input.type === "RISK") {
+        columnDefinitions = [
+          {
+            key: "riskCode",
+            header: "Code (Unique)",
+            width: 25,
+            note: "Required. Format: RISK-XXXX",
+          },
+          { key: "opdCode", header: "OPD Code", width: 20, note: "Required." },
+          {
+            key: "riskDescription",
+            header: "Description",
+            width: 40,
+            note: "Required.",
+          },
+          { key: "riskCategory", header: "Category", width: 20 },
+          {
+            key: "impactLevel",
+            header: "Impact",
+            width: 15,
+            validation: {
+              type: "list",
+              formulae: ['"LOW,MEDIUM,HIGH,CRITICAL"'],
+            },
+          },
+          {
+            key: "likelihoodLevel",
+            header: "Likelihood",
+            width: 15,
+            validation: {
+              type: "list",
+              formulae: ['"LOW,MEDIUM,HIGH,CRITICAL"'],
+            },
+          },
+          { key: "mitigationPlan", header: "Mitigation", width: 40 },
+          { key: "responsiblePerson", header: "Person In Charge", width: 20 },
+        ];
+      } else {
+        columnDefinitions = [
+          {
+            key: "appCode",
+            header: "App Code",
+            width: 25,
+            note: "Required. Must match existing App.",
+          },
+          {
+            key: "auditDate",
+            header: "Date (YYYY-MM-DD)",
+            width: 20,
+            note: "Required.",
+          },
+          { key: "auditor", header: "Auditor", width: 20 },
+          { key: "findings", header: "Findings", width: 40 },
+          { key: "recommendations", header: "Recommendations", width: 40 },
+          { key: "score", header: "Score", width: 10, note: "0-100" },
+          {
+            key: "status",
+            header: "Status",
+            width: 20,
+            validation: {
+              type: "list",
+              formulae: ['"PENDING,PASSED,FAILED_REMEDIATION_REQUIRED"'],
+            },
+          },
+        ];
+      }
+
+      const selectedColumns = columnDefinitions.filter((col) =>
+        input.columns.includes(col.key)
+      );
+
+      const buffer = await ExcelService.generateTemplate(selectedColumns);
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Export Data
+   */
+  export: protectedProcedure
+    .input(
+      z.object({
+        type: z.enum(["RISK", "AUDIT"]),
+        search: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { type, search } = input;
+      let data: any[] = [];
+      let columns: any[] = [];
+
+      if (type === "RISK") {
+        const risks = await prisma.riskRegister.findMany({
+          where: {
+            ...(search && {
+              riskCode: { contains: search, mode: "insensitive" },
+            }),
+          },
+          include: { opd: { select: { code: true } } },
+          orderBy: { riskCode: "asc" },
+        });
+
+        columns = [
+          { key: "riskCode", header: "Code", width: 25 },
+          { key: "opdCode", header: "OPD", width: 20 },
+          { key: "riskDescription", header: "Description", width: 40 },
+          { key: "riskCategory", header: "Category", width: 20 },
+          { key: "impactLevel", header: "Impact", width: 15 },
+          { key: "likelihoodLevel", header: "Likelihood", width: 15 },
+          { key: "mitigationPlan", header: "Mitigation", width: 40 },
+        ];
+
+        data = risks.map((r) => ({
+          ...r,
+          opdCode: r.opd.code,
+        }));
+      } else {
+        const audits = await prisma.securityAudit.findMany({
+          where: {
+            ...(search && {
+              auditor: { contains: search, mode: "insensitive" },
+            }),
+          },
+          include: { app: { select: { code: true } } },
+          orderBy: { auditDate: "desc" },
+        });
+
+        columns = [
+          { key: "appCode", header: "App", width: 25 },
+          { key: "auditDate", header: "Date", width: 20 },
+          { key: "auditor", header: "Auditor", width: 20 },
+          { key: "findings", header: "Findings", width: 40 },
+          { key: "score", header: "Score", width: 10 },
+          { key: "status", header: "Status", width: 20 },
+        ];
+
+        data = audits.map((a) => ({
+          ...a,
+          appCode: a.app.code,
+          auditDate: a.auditDate.toISOString().split("T")[0],
+        }));
+      }
+
+      const buffer = await ExcelService.exportData(
+        data,
+        columns,
+        `${type} Data`
+      );
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Import Data
+   */
+  import: protectedProcedure
+    .input(
+      z.object({ fileBase64: z.string(), type: z.enum(["RISK", "AUDIT"]) })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+
+      if (input.type === "RISK") {
+        if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "OPERATOR") {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only Admin/Operator can import risks",
+          });
+        }
+
+        const rowSchema = z.object({
+          "Code (Unique)": z.string().regex(/^RISK-[A-Z0-9-]+$/),
+          "OPD Code": z.string(),
+          Description: z.string().min(10),
+          Category: z.string().optional(),
+          Impact: riskLevelEnum.default("LOW"),
+          Likelihood: riskLevelEnum.default("LOW"),
+          Mitigation: z.string().optional(),
+          "Person In Charge": z.string().optional(),
+        });
+
+        const columnMapping = {
+          "Code (Unique)": "Code (Unique)",
+          "OPD Code": "OPD Code",
+          Description: "Description",
+          Category: "Category",
+          Impact: "Impact",
+          Likelihood: "Likelihood",
+          Mitigation: "Mitigation",
+          "Person In Charge": "Person In Charge",
+        };
+
+        const { success: rows, errors } = await ExcelService.parseExcel(
+          buffer,
+          rowSchema,
+          columnMapping
+        );
+        if (errors.length > 0)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Validation failed",
+            cause: errors,
+          });
+
+        return await prisma.$transaction(async (tx) => {
+          let inserted = 0;
+          let updated = 0;
+          for (const row of rows) {
+            const code = row["Code (Unique)"];
+            const opdCode = row["OPD Code"];
+            const opd = await tx.opd.findUnique({ where: { code: opdCode } });
+            if (!opd) throw new Error(`OPD '${opdCode}' not found`);
+
+            // Permission check
+            if (ctx.user.role === "OPERATOR" && opd.id !== ctx.user.opdId) {
+              throw new Error(`Cannot import risk for OPD '${opdCode}'`);
+            }
+
+            const impact = row["Impact"] as any;
+            const likelihood = row["Likelihood"] as any;
+            const scoreCalc = calculateRiskScore(impact, likelihood);
+
+            const data = {
+              riskCode: code,
+              opdId: opd.id,
+              riskDescription: row["Description"],
+              riskCategory: row["Category"],
+              impactLevel: impact,
+              likelihoodLevel: likelihood,
+              mitigationPlan: row["Mitigation"],
+              responsiblePerson: row["Person In Charge"],
+              riskScore: scoreCalc.score,
+            };
+
+            const existing = await tx.riskRegister.findUnique({
+              where: { riskCode: code },
+            });
+            if (existing) {
+              await tx.riskRegister.update({
+                where: { id: existing.id },
+                data,
+              });
+              updated++;
+            } else {
+              await tx.riskRegister.create({ data });
+              inserted++;
+            }
+          }
+          return { insertedCount: inserted, updatedCount: updated };
+        });
+      }
+      // AUDIT IMPORT
+      if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "AUDITOR") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only Admin/Auditor can import audits",
+        });
+      }
+
+      const rowSchema = z.object({
+        "App Code": z.string(),
+        "Date (YYYY-MM-DD)": z.coerce.date(),
+        Auditor: z.string().optional(),
+        Findings: z.string().optional(),
+        Recommendations: z.string().optional(),
+        Score: z.coerce.number().min(0).max(100).optional(),
+        Status: auditStatusEnum.default("PENDING"),
+      });
+
+      const columnMapping = {
+        "App Code": "App Code",
+        "Date (YYYY-MM-DD)": "Date (YYYY-MM-DD)",
+        Auditor: "Auditor",
+        Findings: "Findings",
+        Recommendations: "Recommendations",
+        Score: "Score",
+        Status: "Status",
+      };
+
+      const { success: rows, errors } = await ExcelService.parseExcel(
+        buffer,
+        rowSchema,
+        columnMapping
+      );
+      if (errors.length > 0)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Validation failed",
+          cause: errors,
+        });
+
+      return await prisma.$transaction(async (tx) => {
+        let inserted = 0;
+        for (const row of rows) {
+          const appCode = row["App Code"];
+          const app = await tx.application.findUnique({
+            where: { code: appCode },
+          });
+          if (!app) throw new Error(`App '${appCode}' not found`);
+
+          const data = {
+            appId: app.id,
+            auditDate: row["Date (YYYY-MM-DD)"],
+            auditor: row["Auditor"],
+            findings: row["Findings"],
+            recommendations: row["Recommendations"],
+            score: row["Score"],
+            status: row["Status"] as any,
+          };
+
+          // Audits are usually appended, not updated by code (no unique code for audit)
+          // Unless we define a composite key or logic. For now, always insert new.
+          await tx.securityAudit.create({ data });
+          inserted++;
+        }
+        return { insertedCount: inserted, updatedCount: 0 };
+      });
+    }),
 });

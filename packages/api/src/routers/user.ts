@@ -21,6 +21,7 @@ import prisma from "@simapbe/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../index";
+import { ExcelService } from "../services/excel-service";
 
 // ============================================
 // Schema Definitions
@@ -345,13 +346,7 @@ export const userRouter = router({
    *       consider using the authClient.admin.createUser endpoint.
    */
   create: adminProcedure.input(createUserSchema).mutation(async ({ input }) => {
-    const {
-      email,
-      name: _name,
-      password: _password,
-      role: _role,
-      opdId,
-    } = input;
+    const { email, opdId } = input;
 
     // Check for existing email
     const existing = await prisma.user.findUnique({
@@ -381,7 +376,6 @@ export const userRouter = router({
 
     // Note: For proper password hashing and account creation,
     // use better-auth's admin.createUser API on the client side.
-    // This endpoint is for reference/fallback.
     throw new TRPCError({
       code: "NOT_IMPLEMENTED",
       message:
@@ -569,4 +563,175 @@ export const userRouter = router({
       },
     ];
   }),
+
+  /**
+   * Download Excel Template
+   */
+  downloadTemplate: adminProcedure
+    .input(
+      z.object({
+        columns: z.array(z.string()).min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const columnDefinitions = [
+        { key: "name", header: "Name", width: 30, note: "Required." },
+        {
+          key: "email",
+          header: "Email",
+          width: 30,
+          note: "Required. Must be unique.",
+        },
+        {
+          key: "role",
+          header: "Role",
+          width: 15,
+          validation: {
+            type: "list",
+            formulae: ['"SUPER_ADMIN,OPERATOR,AUDITOR,LEADER"'],
+          },
+        },
+        { key: "opdCode", header: "OPD Code", width: 20 },
+      ] as const;
+
+      const selectedColumns = columnDefinitions.filter((col) =>
+        input.columns.includes(col.key)
+      );
+
+      const buffer = await ExcelService.generateTemplate(selectedColumns);
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Export Data
+   */
+  export: adminProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        role: userRoleSchema.optional(),
+        opdId: z.cuid().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { search, role, opdId } = input;
+
+      const users = await prisma.user.findMany({
+        where: {
+          ...(role && { role }),
+          ...(opdId && { opdId }),
+          ...(search && {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } },
+            ],
+          }),
+        },
+        include: {
+          opd: { select: { code: true } },
+        },
+        orderBy: { name: "asc" },
+      });
+
+      const columns = [
+        { key: "name", header: "Name", width: 30 },
+        { key: "email", header: "Email", width: 30 },
+        { key: "role", header: "Role", width: 15 },
+        { key: "opdCode", header: "OPD", width: 20 },
+      ];
+
+      const data = users.map((u) => ({
+        ...u,
+        opdCode: u.opd?.code || "",
+      }));
+
+      const buffer = await ExcelService.exportData(data, columns, "Users");
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Import Data
+   * Note: This only creates the User record. Passwords are NOT set.
+   * Users must use "Forgot Password" or admins must manually set credentials later.
+   */
+  import: adminProcedure
+    .input(z.object({ fileBase64: z.string() }))
+    .mutation(async ({ input }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+
+      const rowSchema = z.object({
+        Name: z.string().min(2),
+        Email: z.string().email(),
+        Role: userRoleSchema.default("OPERATOR"),
+        "OPD Code": z.string().optional(),
+      });
+
+      const columnMapping = {
+        Name: "Name",
+        Email: "Email",
+        Role: "Role",
+        "OPD Code": "OPD Code",
+      };
+
+      const { success: rows, errors } = await ExcelService.parseExcel(
+        buffer,
+        rowSchema,
+        columnMapping
+      );
+
+      if (errors.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Validation failed for ${errors.length} rows.`,
+          cause: errors,
+        });
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        let inserted = 0;
+        let updated = 0;
+
+        for (const row of rows) {
+          const email = row.Email;
+          let opdId = null;
+
+          if (row["OPD Code"]) {
+            const opd = await tx.opd.findUnique({
+              where: { code: row["OPD Code"] },
+            });
+            if (!opd)
+              throw new Error(`OPD code '${row["OPD Code"]}' not found`);
+            opdId = opd.id;
+          }
+
+          const data = {
+            name: row.Name,
+            email,
+            role: row.Role,
+            opdId,
+            emailVerified: true,
+          };
+
+          const existing = await tx.user.findUnique({ where: { email } });
+
+          if (existing) {
+            await tx.user.update({ where: { id: existing.id }, data });
+            updated++;
+          } else {
+            await tx.user.create({
+              data: {
+                id: crypto.randomUUID(),
+                ...data,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              },
+            });
+            inserted++;
+          }
+        }
+        return { insertedCount: inserted, updatedCount: updated };
+      });
+
+      return result;
+    }),
 });

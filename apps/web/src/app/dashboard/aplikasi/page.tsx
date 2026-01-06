@@ -1,9 +1,13 @@
 "use client";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { trpc } from "@/utils/trpc";
 import { DomainPageShell } from "../_components/domain-page-shell";
+import { ExcelDataActions } from "../_components/excel-data-actions";
 import { ApplicationDeleteDialog } from "./_components/application-delete-dialog";
 import { ApplicationFormDialog } from "./_components/application-form-dialog";
 import { ApplicationTable } from "./_components/application-table";
@@ -38,11 +42,60 @@ type ApplicationData = {
   };
 };
 
+const templateColumns = [
+  { id: "code", label: "Code (Unique)", required: true },
+  { id: "name", label: "Name", required: true },
+  { id: "description", label: "Description" },
+  { id: "type", label: "Type" },
+  { id: "platform", label: "Platform" },
+  { id: "status", label: "Status" },
+  { id: "repositoryUrl", label: "Repository URL" },
+  { id: "opdCode", label: "OPD Code", required: true },
+];
+
 export default function AplikasiPage() {
   const [showFormDialog, setShowFormDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDuplicationDialog, setShowDuplicationDialog] = useState(false);
   const [selectedApp, setSelectedApp] = useState<ApplicationData | null>(null);
+
+  const queryClient = useQueryClient();
+
+  const downloadTemplateMutation = useMutation({
+    mutationFn: trpc.app.downloadTemplate.mutationOptions().mutationFn,
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: trpc.app.export.mutationOptions().mutationFn,
+  });
+
+  const importMutation = useMutation({
+    mutationFn: trpc.app.import.mutationOptions().mutationFn,
+  });
+
+  const handleGenerateTemplate = async (columns: string[]) => {
+    const base64 = await downloadTemplateMutation.mutateAsync({ columns });
+    const link = document.createElement("a");
+    link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`;
+    link.download = "template-aplikasi.xlsx";
+    link.click();
+    toast.success("Template berhasil didownload");
+  };
+
+  const handleExportData = async () => {
+    const base64 = await exportMutation.mutateAsync({});
+    const link = document.createElement("a");
+    link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`;
+    link.download = "data-aplikasi.xlsx";
+    link.click();
+    toast.success("Data berhasil diexport");
+  };
+
+  const handleImportData = async (fileBase64: string) => {
+    const result = await importMutation.mutateAsync({ fileBase64 });
+    queryClient.invalidateQueries({ queryKey: [["app", "list"]] });
+    return result;
+  };
 
   const handleEdit = (app: ApplicationData) => {
     setSelectedApp(app);
@@ -68,6 +121,13 @@ export default function AplikasiPage() {
     <DomainPageShell
       actions={
         <>
+          <ExcelDataActions
+            domainName="Aplikasi"
+            onExportData={handleExportData}
+            onGenerateTemplate={handleGenerateTemplate}
+            onImportData={handleImportData}
+            templateColumns={templateColumns}
+          />
           <Button
             onClick={() => setShowDuplicationDialog(true)}
             variant="outline"

@@ -24,6 +24,7 @@ import {
   protectedProcedure,
   router,
 } from "../index";
+import { ExcelService } from "../services/excel-service";
 
 // ============================================
 // Input Schemas
@@ -611,4 +612,199 @@ export const appRouter = router({
       })),
     };
   }),
+
+  /**
+   * Download Excel Template
+   */
+  downloadTemplate: protectedProcedure
+    .input(
+      z.object({
+        columns: z.array(z.string()).min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const columnDefinitions = [
+        {
+          key: "code",
+          header: "Code (Unique)",
+          width: 25,
+          note: "Required. Format: APP-XXXX",
+        },
+        { key: "name", header: "Name", width: 30, note: "Required." },
+        { key: "description", header: "Description", width: 40 },
+        {
+          key: "type",
+          header: "Type",
+          width: 15,
+          validation: { type: "list", formulae: ['"UMUM,KHUSUS"'] },
+        },
+        {
+          key: "platform",
+          header: "Platform",
+          width: 15,
+          validation: { type: "list", formulae: ['"WEB,MOBILE,DESKTOP,API"'] },
+        },
+        {
+          key: "status",
+          header: "Status",
+          width: 15,
+          validation: {
+            type: "list",
+            formulae: ['"PLANNING,DEVELOPMENT,ACTIVE,ARCHIVED"'],
+          },
+        },
+        { key: "repositoryUrl", header: "Repository URL", width: 30 },
+        { key: "opdCode", header: "OPD Code", width: 20, note: "Required." },
+      ] as const;
+
+      const selectedColumns = columnDefinitions.filter((col) =>
+        input.columns.includes(col.key)
+      );
+
+      const buffer = await ExcelService.generateTemplate(selectedColumns);
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Export Data
+   */
+  export: protectedProcedure
+    .input(
+      z.object({
+        type: appTypeEnum.optional(),
+        status: statusEnum.optional(),
+        platform: platformEnum.optional(),
+        search: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { type, status, platform, search } = input;
+
+      const apps = await prisma.application.findMany({
+        where: {
+          ...(type && { type }),
+          ...(status && { status }),
+          ...(platform && { platform }),
+          ...(search && {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { code: { contains: search, mode: "insensitive" } },
+            ],
+          }),
+        },
+        include: {
+          opd: { select: { code: true } },
+        },
+        orderBy: { name: "asc" },
+      });
+
+      const columns = [
+        { key: "code", header: "Code", width: 25 },
+        { key: "name", header: "Name", width: 30 },
+        { key: "description", header: "Description", width: 40 },
+        { key: "type", header: "Type", width: 15 },
+        { key: "platform", header: "Platform", width: 15 },
+        { key: "status", header: "Status", width: 15 },
+        { key: "repositoryUrl", header: "Repository", width: 30 },
+        { key: "opdCode", header: "OPD", width: 20 },
+      ];
+
+      const data = apps.map((a) => ({
+        ...a,
+        opdCode: a.opd.code,
+      }));
+
+      const buffer = await ExcelService.exportData(
+        data,
+        columns,
+        "Applications"
+      );
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Import Data
+   */
+  import: operatorProcedure
+    .input(z.object({ fileBase64: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+
+      const rowSchema = z.object({
+        "Code (Unique)": z.string().regex(/^APP-[A-Z0-9-]+$/, "Invalid format"),
+        Name: z.string().min(3),
+        Description: z.string().optional(),
+        Type: appTypeEnum.default("KHUSUS"),
+        Platform: platformEnum.default("WEB"),
+        Status: statusEnum.default("PLANNING"),
+        "Repository URL": z.string().url().optional(),
+        "OPD Code": z.string(),
+      });
+
+      const columnMapping = {
+        "Code (Unique)": "Code (Unique)",
+        Name: "Name",
+        Description: "Description",
+        Type: "Type",
+        Platform: "Platform",
+        Status: "Status",
+        "Repository URL": "Repository URL",
+        "OPD Code": "OPD Code",
+      };
+
+      const { success: rows, errors } = await ExcelService.parseExcel(
+        buffer,
+        rowSchema,
+        columnMapping
+      );
+
+      if (errors.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Validation failed for ${errors.length} rows.`,
+          cause: errors,
+        });
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        let inserted = 0;
+        let updated = 0;
+
+        for (const row of rows) {
+          const code = row["Code (Unique)"];
+          const opdCode = row["OPD Code"];
+
+          const opd = await tx.opd.findUnique({ where: { code: opdCode } });
+          if (!opd) throw new Error(`OPD code '${opdCode}' not found`);
+
+          if (ctx.user.role === "OPERATOR" && opd.id !== ctx.user.opdId) {
+            throw new Error(`You cannot import data for OPD '${opdCode}'`);
+          }
+
+          const data = {
+            code,
+            name: row["Name"],
+            description: row["Description"],
+            type: row["Type"] as any,
+            platform: row["Platform"] as any,
+            status: row["Status"] as any,
+            repositoryUrl: row["Repository URL"],
+            opdId: opd.id,
+          };
+
+          const existing = await tx.application.findUnique({ where: { code } });
+
+          if (existing) {
+            await tx.application.update({ where: { id: existing.id }, data });
+            updated++;
+          } else {
+            await tx.application.create({ data });
+            inserted++;
+          }
+        }
+        return { insertedCount: inserted, updatedCount: updated };
+      });
+
+      return result;
+    }),
 });

@@ -23,6 +23,7 @@ import {
   protectedProcedure,
   router,
 } from "../index";
+import { ExcelService } from "../services/excel-service";
 
 // ============================================
 // Input Schemas
@@ -423,4 +424,215 @@ export const dataRouter = router({
 
     return pending;
   }),
+
+  /**
+   * Download Excel Template
+   */
+  downloadTemplate: protectedProcedure
+    .input(
+      z.object({
+        columns: z.array(z.string()).min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const columnDefinitions = [
+        {
+          key: "dataCode",
+          header: "Code (Unique)",
+          width: 25,
+          note: "Required. Format: DS-XXX-000",
+        },
+        { key: "dataName", header: "Name", width: 30, note: "Required." },
+        { key: "description", header: "Description", width: 40 },
+        {
+          key: "format",
+          header: "Format",
+          width: 15,
+          note: "JSON, XML, CSV, etc.",
+        },
+        {
+          key: "validityPeriod",
+          header: "Validity",
+          width: 15,
+          note: "Annual, Monthly, etc.",
+        },
+        { key: "updateFrequency", header: "Update Frequency", width: 20 },
+        {
+          key: "classification",
+          header: "Classification",
+          width: 15,
+          validation: {
+            type: "list",
+            formulae: ['"PUBLIC,RESTRICTED,SECRET"'],
+          },
+        },
+        {
+          key: "producerOpdCode",
+          header: "Producer OPD Code",
+          width: 20,
+          note: "Required.",
+        },
+      ] as const;
+
+      const selectedColumns = columnDefinitions.filter((col) =>
+        input.columns.includes(col.key)
+      );
+
+      const buffer = await ExcelService.generateTemplate(selectedColumns);
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Export Data
+   */
+  export: protectedProcedure
+    .input(
+      z.object({
+        classification: dataClassEnum.optional(),
+        search: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { classification, search } = input;
+
+      const dataStandards = await prisma.dataStandard.findMany({
+        where: {
+          ...(classification && { classification }),
+          ...(search && {
+            OR: [
+              { dataName: { contains: search, mode: "insensitive" } },
+              { dataCode: { contains: search, mode: "insensitive" } },
+            ],
+          }),
+        },
+        include: {
+          producerOpd: { select: { code: true } },
+        },
+        orderBy: { dataCode: "asc" },
+      });
+
+      const columns = [
+        { key: "dataCode", header: "Code", width: 25 },
+        { key: "dataName", header: "Name", width: 30 },
+        { key: "description", header: "Description", width: 40 },
+        { key: "format", header: "Format", width: 15 },
+        { key: "validityPeriod", header: "Validity", width: 15 },
+        { key: "updateFrequency", header: "Frequency", width: 20 },
+        { key: "classification", header: "Class", width: 15 },
+        { key: "producerOpdCode", header: "Producer OPD", width: 20 },
+      ];
+
+      const data = dataStandards.map((d) => ({
+        ...d,
+        producerOpdCode: d.producerOpd?.code || "",
+      }));
+
+      const buffer = await ExcelService.exportData(
+        data,
+        columns,
+        "Data Standards"
+      );
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Import Data
+   */
+  import: operatorProcedure
+    .input(z.object({ fileBase64: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+
+      const rowSchema = z.object({
+        "Code (Unique)": z
+          .string()
+          .regex(/^DS-[A-Z]{3}-\d{3}$/, "Invalid format"),
+        Name: z.string().min(3),
+        Description: z.string().optional(),
+        Format: z.string().min(1),
+        Validity: z.string().min(1),
+        "Update Frequency": z.string().optional(),
+        Classification: dataClassEnum.default("PUBLIC"),
+        "Producer OPD Code": z.string().optional(),
+      });
+
+      const columnMapping = {
+        "Code (Unique)": "Code (Unique)",
+        Name: "Name",
+        Description: "Description",
+        Format: "Format",
+        Validity: "Validity",
+        "Update Frequency": "Update Frequency",
+        Classification: "Classification",
+        "Producer OPD Code": "Producer OPD Code",
+      };
+
+      const { success: rows, errors } = await ExcelService.parseExcel(
+        buffer,
+        rowSchema,
+        columnMapping
+      );
+
+      if (errors.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Validation failed for ${errors.length} rows.`,
+          cause: errors,
+        });
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        let inserted = 0;
+        let updated = 0;
+
+        for (const row of rows) {
+          const code = row["Code (Unique)"];
+          let opdId = null;
+
+          const opdCode = row["Producer OPD Code"];
+          if (opdCode) {
+            const opd = await tx.opd.findUnique({ where: { code: opdCode } });
+            if (!opd) throw new Error(`OPD code '${opdCode}' not found`);
+            opdId = opd.id;
+          }
+
+          // Permission check if Operator
+          if (ctx.user.role === "OPERATOR") {
+            if (opdId && opdId !== ctx.user.opdId) {
+              throw new Error(`You cannot import data for OPD '${opdCode}'`);
+            }
+            if (!opdId && ctx.user.opdId) {
+              opdId = ctx.user.opdId; // Default to user's OPD if missing in file
+            }
+          }
+
+          const data = {
+            dataCode: code,
+            dataName: row["Name"],
+            description: row["Description"],
+            format: row["Format"],
+            validityPeriod: row["Validity"],
+            updateFrequency: row["Update Frequency"],
+            classification: row["Classification"] as any,
+            producerOpdId: opdId,
+            isValidated: false, // Reset validation on bulk import
+          };
+
+          const existing = await tx.dataStandard.findUnique({
+            where: { dataCode: code },
+          });
+
+          if (existing) {
+            await tx.dataStandard.update({ where: { id: existing.id }, data });
+            updated++;
+          } else {
+            await tx.dataStandard.create({ data });
+            inserted++;
+          }
+        }
+        return { insertedCount: inserted, updatedCount: updated };
+      });
+
+      return result;
+    }),
 });

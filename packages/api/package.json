@@ -18,8 +18,9 @@
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
     "dotenv": "catalog:",
-    "zod": "catalog:",
-    "elysia": "catalog:"
+    "elysia": "catalog:",
+    "exceljs": "^4.4.0",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@simapbe/config": "workspace:*",

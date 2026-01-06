@@ -23,6 +23,7 @@ import {
   protectedProcedure,
   router,
 } from "../index";
+import { ExcelService } from "../services/excel-service";
 
 // ============================================
 // Input Schemas (Matching Prisma Enums)
@@ -458,4 +459,252 @@ export const infraRouter = router({
       })),
     };
   }),
+
+  /**
+   * Download Excel Template
+   */
+  downloadTemplate: protectedProcedure
+    .input(
+      z.object({
+        columns: z.array(z.string()).min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const columnDefinitions = [
+        {
+          key: "code",
+          header: "Code (Unique)",
+          width: 20,
+          note: "Required. Must be unique. Format: INFRA-XXXX",
+        },
+        { key: "name", header: "Name", width: 30, note: "Required." },
+        { key: "description", header: "Description", width: 40 },
+        {
+          key: "type",
+          header: "Type",
+          width: 20,
+          validation: {
+            type: "list",
+            formulae: [
+              '"SERVER_PHYSICAL,VIRTUAL_MACHINE,CLOUD_SaaS,CLOUD_IaaS,NETWORK_DEVICE"',
+            ],
+          },
+        },
+        {
+          key: "location",
+          header: "Location",
+          width: 15,
+          validation: { type: "list", formulae: ['"PDN,LOCAL"'] },
+        },
+        { key: "specs", header: "Specs", width: 30 },
+        { key: "cpuCores", header: "CPU Cores", width: 15 },
+        { key: "ramGB", header: "RAM (GB)", width: 15 },
+        { key: "storageGB", header: "Storage (GB)", width: 15 },
+        { key: "ipAddress", header: "IP Address", width: 20 },
+        {
+          key: "opdCode",
+          header: "OPD Code",
+          width: 20,
+          note: "Required. Must match existing OPD Code.",
+        },
+      ] as const;
+
+      // Filter columns based on user selection
+      const selectedColumns = columnDefinitions.filter((col) =>
+        input.columns.includes(col.key)
+      );
+
+      if (selectedColumns.length === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No valid columns selected",
+        });
+      }
+
+      const buffer = await ExcelService.generateTemplate(selectedColumns);
+
+      // Return base64 string because tRPC handles JSON best
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Export Data to Excel
+   */
+  export: protectedProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        opdId: z.cuid().optional(),
+        type: infraTypeEnum.optional(),
+        location: locationEnum.optional(),
+        isActive: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { search, opdId, type, location, isActive } = input;
+
+      // Operators see their own OPD by default
+      let filterOpdId = opdId;
+      if (ctx.user.role === "OPERATOR" && !opdId) {
+        filterOpdId = ctx.user.opdId || undefined;
+      }
+
+      const items = await prisma.infrastructure.findMany({
+        where: {
+          ...(search && {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { code: { contains: search, mode: "insensitive" } },
+            ],
+          }),
+          ...(filterOpdId && { opdId: filterOpdId }),
+          ...(type && { type }),
+          ...(location && { location }),
+          ...(isActive !== undefined && { isActive }),
+        },
+        include: {
+          opd: true,
+        },
+        orderBy: { name: "asc" },
+      });
+
+      const columns = [
+        { key: "code", header: "Code", width: 20 },
+        { key: "name", header: "Name", width: 30 },
+        { key: "description", header: "Description", width: 40 },
+        { key: "type", header: "Type", width: 20 },
+        { key: "location", header: "Location", width: 15 },
+        { key: "specs", header: "Specs", width: 30 },
+        { key: "cpuCores", header: "CPU Cores", width: 15 },
+        { key: "ramGB", header: "RAM (GB)", width: 15 },
+        { key: "storageGB", header: "Storage (GB)", width: 15 },
+        { key: "ipAddress", header: "IP Address", width: 20 },
+        { key: "opdName", header: "OPD", width: 30 },
+      ];
+
+      const data = items.map((item) => ({
+        ...item,
+        opdName: item.opd?.name || "Unknown",
+      }));
+
+      const buffer = await ExcelService.exportData(
+        data,
+        columns,
+        "Infrastructure List"
+      );
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Import Data from Excel
+   */
+  import: operatorProcedure
+    .input(
+      z.object({
+        fileBase64: z.string(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+
+      // Define Schema for Validation
+      const rowSchema = z.object({
+        "Code (Unique)": z.string().min(3),
+        Name: z.string().min(3),
+        Description: z.string().optional(),
+        Type: infraTypeEnum.optional().default("VIRTUAL_MACHINE"),
+        Location: locationEnum.optional().default("LOCAL"),
+        Specs: z.string().optional(),
+        "CPU Cores": z.coerce.number().min(0).optional(),
+        "RAM (GB)": z.coerce.number().min(0).optional(),
+        "Storage (GB)": z.coerce.number().min(0).optional(),
+        "IP Address": z.string().optional(),
+        "OPD Code": z.string(),
+      });
+
+      const columnMapping: Record<string, string> = {
+        "Code (Unique)": "Code (Unique)",
+        Name: "Name",
+        Description: "Description",
+        Type: "Type",
+        Location: "Location",
+        Specs: "Specs",
+        "CPU Cores": "CPU Cores",
+        "RAM (GB)": "RAM (GB)",
+        "Storage (GB)": "Storage (GB)",
+        "IP Address": "IP Address",
+        "OPD Code": "OPD Code",
+      };
+
+      const { success: rows, errors } = await ExcelService.parseExcel(
+        buffer,
+        rowSchema,
+        columnMapping
+      );
+
+      if (errors.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Validation failed for ${errors.length} rows. First error: ${JSON.stringify(errors[0])}`,
+          cause: errors,
+        });
+      }
+
+      // Use Transaction for Atomicity
+      const result = await prisma.$transaction(async (tx) => {
+        let insertedCount = 0;
+        let updatedCount = 0;
+
+        for (const row of rows) {
+          // Resolve OPD
+          const opdCode = row["OPD Code"];
+          const opd = await tx.opd.findUnique({ where: { code: opdCode } });
+
+          if (!opd) {
+            throw new Error(`OPD with code '${opdCode}' not found.`);
+          }
+
+          // Check permissions if Operator
+          if (ctx.user.role === "OPERATOR" && opd.id !== ctx.user.opdId) {
+            throw new Error(`You cannot import data for OPD '${opdCode}'.`);
+          }
+
+          const infraData = {
+            code: row["Code (Unique)"],
+            name: row["Name"],
+            description: row["Description"],
+            type: row["Type"] as any,
+            location: row["Location"] as any,
+            specs: row["Specs"],
+            cpuCores: row["CPU Cores"],
+            ramGB: row["RAM (GB)"],
+            storageGB: row["Storage (GB)"],
+            ipAddress: row["IP Address"],
+            opdId: opd.id,
+            isActive: true,
+          };
+
+          const existing = await tx.infrastructure.findUnique({
+            where: { code: infraData.code },
+          });
+
+          if (existing) {
+            await tx.infrastructure.update({
+              where: { id: existing.id },
+              data: infraData,
+            });
+            updatedCount++;
+          } else {
+            await tx.infrastructure.create({
+              data: infraData,
+            });
+            insertedCount++;
+          }
+        }
+
+        return { insertedCount, updatedCount };
+      });
+
+      return result;
+    }),
 });

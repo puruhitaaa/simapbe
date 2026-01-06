@@ -16,6 +16,7 @@ import prisma from "@simapbe/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../index";
+import { ExcelService } from "../services/excel-service";
 
 // ============================================
 // Input Schemas (Zod Validation)
@@ -336,4 +337,145 @@ export const opdRouter = router({
       perOpd: stats,
     };
   }),
+
+  /**
+   * Download Excel Template
+   */
+  downloadTemplate: protectedProcedure
+    .input(
+      z.object({
+        columns: z.array(z.string()).min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const columnDefinitions = [
+        {
+          key: "code",
+          header: "Code (Unique)",
+          width: 25,
+          note: "Required. Format: UPPERCASE_ALPHANUMERIC",
+        },
+        { key: "name", header: "Name", width: 40, note: "Required." },
+        { key: "acronym", header: "Acronym", width: 20 },
+        { key: "address", header: "Address", width: 40 },
+        { key: "phone", header: "Phone", width: 20 },
+        { key: "email", header: "Email", width: 30 },
+      ] as const;
+
+      const selectedColumns = columnDefinitions.filter((col) =>
+        input.columns.includes(col.key)
+      );
+
+      const buffer = await ExcelService.generateTemplate(selectedColumns);
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Export Data
+   */
+  export: protectedProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { search } = input;
+
+      const opds = await prisma.opd.findMany({
+        where: search
+          ? {
+              OR: [
+                { name: { contains: search, mode: "insensitive" } },
+                { code: { contains: search, mode: "insensitive" } },
+                { acronym: { contains: search, mode: "insensitive" } },
+              ],
+            }
+          : undefined,
+        orderBy: { code: "asc" },
+      });
+
+      const columns = [
+        { key: "code", header: "Code", width: 25 },
+        { key: "name", header: "Name", width: 40 },
+        { key: "acronym", header: "Acronym", width: 20 },
+        { key: "address", header: "Address", width: 40 },
+        { key: "phone", header: "Phone", width: 20 },
+        { key: "email", header: "Email", width: 30 },
+      ];
+
+      const buffer = await ExcelService.exportData(opds, columns, "OPD List");
+      return buffer.toString("base64");
+    }),
+
+  /**
+   * Import Data
+   */
+  import: adminProcedure
+    .input(z.object({ fileBase64: z.string() }))
+    .mutation(async ({ input }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+
+      const rowSchema = z.object({
+        "Code (Unique)": z.string().regex(/^[A-Z0-9_]+$/),
+        Name: z.string().min(3),
+        Acronym: z.string().optional(),
+        Address: z.string().optional(),
+        Phone: z.string().optional(),
+        Email: z.string().email().optional(),
+      });
+
+      const columnMapping = {
+        "Code (Unique)": "Code (Unique)",
+        Name: "Name",
+        Acronym: "Acronym",
+        Address: "Address",
+        Phone: "Phone",
+        Email: "Email",
+      };
+
+      const { success: rows, errors } = await ExcelService.parseExcel(
+        buffer,
+        rowSchema,
+        columnMapping
+      );
+
+      if (errors.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Validation failed for ${errors.length} rows.`,
+          cause: errors,
+        });
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        let inserted = 0;
+        let updated = 0;
+
+        for (const row of rows) {
+          const code = row["Code (Unique)"];
+          const data = {
+            code,
+            name: row["Name"],
+            acronym: row["Acronym"],
+            address: row["Address"],
+            phone: row["Phone"],
+            email: row["Email"],
+          };
+
+          const existing = await tx.opd.findUnique({ where: { code } });
+
+          if (existing) {
+            await tx.opd.update({ where: { id: existing.id }, data });
+            updated++;
+          } else {
+            await tx.opd.create({ data });
+            inserted++;
+          }
+        }
+        return { insertedCount: inserted, updatedCount: updated };
+      });
+
+      return result;
+    }),
 });
