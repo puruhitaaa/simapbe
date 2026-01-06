@@ -14,7 +14,7 @@ import {
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import "@xyflow/react/dist/style.css";
 import {
   AppWindow,
@@ -24,48 +24,50 @@ import {
   Shield,
   Workflow,
 } from "lucide-react";
+import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
 
 // Domain configuration with colors and icons
 const DOMAIN_CONFIG = {
   PROSES_BISNIS: {
     color: "#3b82f6",
-    bgColor: "#eff6ff",
-    borderColor: "#bfdbfe",
+    className:
+      "bg-blue-50 border-blue-200 dark:bg-blue-950/40 dark:border-blue-800",
     label: "Proses Bisnis",
     icon: Workflow,
   },
   DATA: {
     color: "#10b981",
-    bgColor: "#ecfdf5",
-    borderColor: "#a7f3d0",
+    className:
+      "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800",
     label: "Data",
     icon: Database,
   },
   LAYANAN: {
     color: "#8b5cf6",
-    bgColor: "#f5f3ff",
-    borderColor: "#c4b5fd",
+    className:
+      "bg-violet-50 border-violet-200 dark:bg-violet-950/40 dark:border-violet-800",
     label: "Layanan",
     icon: Globe,
   },
   APLIKASI: {
     color: "#f59e0b",
-    bgColor: "#fffbeb",
-    borderColor: "#fcd34d",
+    className:
+      "bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800",
     label: "Aplikasi",
     icon: AppWindow,
   },
   INFRASTRUKTUR: {
     color: "#ef4444",
-    bgColor: "#fef2f2",
-    borderColor: "#fecaca",
+    className:
+      "bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800",
     label: "Infrastruktur",
     icon: Server,
   },
   KEAMANAN: {
     color: "#ec4899",
-    bgColor: "#fdf2f8",
-    borderColor: "#fbcfe8",
+    className:
+      "bg-pink-50 border-pink-200 dark:bg-pink-950/40 dark:border-pink-800",
     label: "Keamanan",
     icon: Shield,
   },
@@ -88,16 +90,17 @@ function DomainNode({ data }: NodeProps<Node<DomainNodeData>>) {
 
   return (
     <div
-      className="rounded-lg border-2 px-4 py-3 shadow-md transition-shadow hover:shadow-lg"
+      className={cn(
+        "rounded-lg border-2 px-4 py-3 shadow-md transition-shadow hover:shadow-lg",
+        config.className
+      )}
       style={{
-        backgroundColor: config.bgColor,
-        borderColor: config.borderColor,
         minWidth: "140px",
         maxWidth: "200px",
       }}
     >
       <Handle
-        className="!h-3 !w-3 !border-2 !border-white"
+        className="!h-3 !w-3 !border-2 !border-white dark:!border-slate-800"
         position={Position.Left}
         style={{ backgroundColor: config.color }}
         type="target"
@@ -122,7 +125,7 @@ function DomainNode({ data }: NodeProps<Node<DomainNodeData>>) {
         <p className="mt-2 text-muted-foreground text-xs">{data.description}</p>
       )}
       <Handle
-        className="!h-3 !w-3 !border-2 !border-white"
+        className="!h-3 !w-3 !border-2 !border-white dark:!border-slate-800"
         position={Position.Right}
         style={{ backgroundColor: config.color }}
         type="source"
@@ -278,6 +281,13 @@ export function ArchitectureGraph({
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
 
+  const { resolvedTheme } = useTheme();
+  const [bgColor, setBgColor] = useState("#e2e8f0");
+
+  useEffect(() => {
+    setBgColor(resolvedTheme === "dark" ? "#1e293b" : "#e2e8f0");
+  }, [resolvedTheme]);
+
   const onInit = useCallback(() => {
     // Graph initialized
   }, []);
@@ -298,7 +308,7 @@ export function ArchitectureGraph({
         onNodesChange={onNodesChange}
         proOptions={{ hideAttribution: true }}
       >
-        <Background color="#e2e8f0" gap={16} />
+        <Background color={bgColor} gap={16} />
         {showControls && <Controls />}
         {showMiniMap && (
           <MiniMap

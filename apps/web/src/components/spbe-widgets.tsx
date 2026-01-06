@@ -1,11 +1,14 @@
 "use client";
 
 import { Award, BarChart3, Target, TrendingUp } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Legend,
   Pie,
   PieChart,
@@ -39,6 +42,13 @@ export function SpbeIndexGauge({
   title = "Indeks SPBE",
   description = "Nilai indeks SPBE Kota Bandung",
 }: SpbeIndexGaugeProps) {
+  const { resolvedTheme } = useTheme();
+  const [emptyColor, setEmptyColor] = useState("#e2e8f0");
+
+  useEffect(() => {
+    setEmptyColor(resolvedTheme === "dark" ? "#334155" : "#e2e8f0");
+  }, [resolvedTheme]);
+
   const percentage = (value / maxValue) * 100;
 
   const getColor = (val: number) => {
@@ -57,7 +67,7 @@ export function SpbeIndexGauge({
 
   const data = [
     { name: "Score", value: percentage, fill: getColor(value) },
-    { name: "Remaining", value: 100 - percentage, fill: "#e2e8f0" },
+    { name: "Remaining", value: 100 - percentage, fill: emptyColor },
   ];
 
   return (
@@ -164,14 +174,15 @@ export function MaturityLevelChart({
               <XAxis domain={[0, 5]} tick={{ fontSize: 12 }} type="number" />
               <YAxis
                 dataKey="domain"
+                interval={0}
                 tick={{ fontSize: 10 }}
                 type="category"
-                width={80}
+                width={100}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(var(--popover))",
-                  border: "1px solid hsl(var(--border))",
+                  backgroundColor: "var(--popover)",
+                  border: "1px solid var(--border)",
                   borderRadius: "var(--radius)",
                 }}
                 formatter={(value) => [`Level ${value}`, "Kematangan"]}
@@ -180,6 +191,12 @@ export function MaturityLevelChart({
                 {chartData.map((entry, index) => (
                   <Cell fill={entry.fill} key={`cell-${index}`} />
                 ))}
+                <LabelList
+                  className="fill-foreground"
+                  dataKey="level"
+                  fontSize={10}
+                  position="right"
+                />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -227,6 +244,13 @@ export function DomainProgressWidget({
   title = "Progress Implementasi",
   description = "Pencapaian vs Target per domain",
 }: DomainProgressWidgetProps) {
+  const { resolvedTheme } = useTheme();
+  const [emptyColor, setEmptyColor] = useState("#e2e8f0");
+
+  useEffect(() => {
+    setEmptyColor(resolvedTheme === "dark" ? "#334155" : "#e2e8f0");
+  }, [resolvedTheme]);
+
   const chartData = data.map((item) => ({
     name: item.domain,
     Realisasi: item.current,
@@ -251,14 +275,14 @@ export function DomainProgressWidget({
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(var(--popover))",
-                  border: "1px solid hsl(var(--border))",
+                  backgroundColor: "var(--popover)",
+                  border: "1px solid var(--border)",
                   borderRadius: "var(--radius)",
                 }}
               />
               <Legend />
               <Bar dataKey="Realisasi" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Target" fill="#e2e8f0" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Target" fill={emptyColor} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -281,6 +305,13 @@ export function CompletionRateWidget({
   title = "Tingkat Penyelesaian",
   description = "Inisiatif SPBE yang selesai",
 }: CompletionRateProps) {
+  const { resolvedTheme } = useTheme();
+  const [emptyColor, setEmptyColor] = useState("#e2e8f0");
+
+  useEffect(() => {
+    setEmptyColor(resolvedTheme === "dark" ? "#334155" : "#e2e8f0");
+  }, [resolvedTheme]);
+
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   const data = [
@@ -314,7 +345,7 @@ export function CompletionRateWidget({
               startAngle={90}
             >
               <RadialBar
-                background={{ fill: "#e2e8f0" }}
+                background={{ fill: emptyColor }}
                 cornerRadius={10}
                 dataKey="value"
               />
