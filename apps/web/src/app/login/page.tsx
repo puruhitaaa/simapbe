@@ -1,11 +1,10 @@
 "use client";
 
 import { Building2 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
-
 import SignInForm from "@/components/sign-in-form";
 import SignUpForm from "@/components/sign-up-form";
-import { Link } from "@/i18n/navigation";
 
 export default function LoginPage() {
   const [showSignIn, setShowSignIn] = useState(true);

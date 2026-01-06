@@ -2,7 +2,6 @@
 
 import { Bell, Search } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -87,9 +86,6 @@ export function DashboardHeader({ user }: { user: User }) {
             3
           </span>
         </Button>
-
-        {/* Language Switcher */}
-        <LanguageSwitcher />
 
         {/* Theme Toggle */}
         <ModeToggle />
