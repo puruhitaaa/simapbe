@@ -142,7 +142,9 @@ export function ApplicationTable({ onEdit, onDelete }: ApplicationTableProps) {
       header: "OPD",
       cell: ({ row }) => {
         const opd = row.original.opd;
-        return <span className="text-sm">{opd.acronym || opd.name}</span>;
+        return (
+          <span className="text-sm">{opd?.acronym || opd?.name || "-"}</span>
+        );
       },
     },
     {
@@ -199,8 +201,8 @@ export function ApplicationTable({ onEdit, onDelete }: ApplicationTableProps) {
         const counts = row.original._count;
         return (
           <div className="text-muted-foreground text-xs">
-            {counts.services} Layanan • {counts.usedData} Data •{" "}
-            {counts.infrastructure} Infra
+            {counts?.services || 0} Layanan • {counts?.usedData || 0} Data •{" "}
+            {counts?.infrastructure || 0} Infra
           </div>
         );
       },

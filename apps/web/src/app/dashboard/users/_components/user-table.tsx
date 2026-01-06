@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Building2, Edit, MoreHorizontal, Shield, Trash2 } from "lucide-react";
-import { useQueryState } from "nuqs";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,8 @@ interface User {
   };
 }
 
+const userRoles = ["SUPER_ADMIN", "OPERATOR", "AUDITOR", "LEADER"] as const;
+
 // Role display configuration
 const roleConfig: Record<
   User["role"],
@@ -68,12 +70,12 @@ export function UserTable({
   onAssignOpd,
 }: UserTableProps) {
   const [search, setSearch] = useQueryState("q");
-  const [roleFilter] = useQueryState("role");
+  const [roleFilter] = useQueryState("role", parseAsStringLiteral(userRoles));
 
   const { data, isLoading } = useQuery({
     ...trpc.user.list.queryOptions({
       search: search || undefined,
-      role: roleFilter as User["role"] | undefined,
+      role: roleFilter || undefined,
       limit: 100,
     }),
   });

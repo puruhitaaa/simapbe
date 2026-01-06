@@ -33,7 +33,8 @@
     "db:reset": "turbo -F @simapbe/db db:reset",
     "db:seed": "turbo -F @simapbe/db db:seed",
     "prepare": "husky",
-    "ruler:apply": "bunx @intellectronica/ruler@latest apply --local-only"
+    "ruler:apply": "bunx @intellectronica/ruler@latest apply --local-only",
+    "auth:generate": "turbo -F @simapbe/auth auth:generate"
   },
   "dependencies": {
     "@simapbe/env": "workspace:*",
