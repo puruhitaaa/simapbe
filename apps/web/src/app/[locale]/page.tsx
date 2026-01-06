@@ -7,20 +7,15 @@ import {
   Server,
   Shield,
 } from "lucide-react";
-import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
+import { getServerSession } from "@/lib/auth-server";
 
 export default async function Home() {
-  const { data: session } = await authClient.getSession({
-    fetchOptions: {
-      headers: await headers(),
-    },
-  });
+  // Use server-side session fetcher for proper cross-origin cookie handling
+  const session = await getServerSession();
 
-  // If logged in, redirect to dashboard
   if (session?.user) {
     redirect("/dashboard");
   }
@@ -34,7 +29,9 @@ export default async function Home() {
             <Building2 className="h-6 w-6 text-primary" />
             <span className="font-bold text-lg">SIMAPBE</span>
           </div>
-          <Button render={<Link href="/login" />}>Masuk</Button>
+          <Button nativeButton={false} render={<Link href="/login" />}>
+            Masuk
+          </Button>
         </div>
       </header>
 
@@ -50,7 +47,11 @@ export default async function Home() {
             Perpres 132/2022 dan prinsip Satu Data Indonesia.
           </p>
           <div className="mt-8 flex justify-center gap-4">
-            <Button render={<Link href="/login" />} size="lg">
+            <Button
+              nativeButton={false}
+              render={<Link href="/login" />}
+              size="lg"
+            >
               Mulai Sekarang
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>

@@ -10,10 +10,12 @@
  * Run: bun db:seed
  */
 
-import "dotenv/config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { scryptAsync } from "@noble/hashes/scrypt.js";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils.js";
 import { PrismaPg } from "@prisma/adapter-pg";
+import dotenv from "dotenv";
 import { PrismaClient } from "./generated/client";
 
 /**
@@ -43,10 +45,26 @@ async function hashPassword(password: string): Promise<string> {
   return `${salt}:${bytesToHex(derivedKey)}`;
 }
 
-// Load from env or use fallback for local development
-const databaseUrl =
-  process.env.DATABASE_URL ||
-  "postgresql://postgres:root@localhost:5432/simapbe";
+const seedFileDir = path.dirname(fileURLToPath(import.meta.url));
+
+// Keep seed behavior consistent with Prisma CLI config in `packages/db/prisma.config.ts`.
+// That config loads `apps/server/.env`, so we do the same here.
+dotenv.config({
+  path: path.resolve(seedFileDir, "..", "..", "..", "apps", "server", ".env"),
+});
+
+const fallbackDatabaseUrl = "postgresql://postgres:root@localhost:5432/simapbe";
+const databaseUrl = process.env.DATABASE_URL ?? fallbackDatabaseUrl;
+
+function redactDatabaseUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.password) parsed.password = "***";
+    return parsed.toString();
+  } catch {
+    return "(unparseable DATABASE_URL)";
+  }
+}
 
 const adapter = new PrismaPg({
   connectionString: databaseUrl,
@@ -55,6 +73,19 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log("🌱 Starting seed...\n");
+
+  if (databaseUrl === fallbackDatabaseUrl) {
+    console.warn(
+      `⚠️  DATABASE_URL not found; using fallback: ${redactDatabaseUrl(
+        databaseUrl
+      )}`
+    );
+    console.warn(
+      "   If you expected a different DB, ensure `apps/server/.env` has DATABASE_URL set.\n"
+    );
+  } else {
+    console.log(`🔌 Seeding database: ${redactDatabaseUrl(databaseUrl)}\n`);
+  }
 
   // ============================================
   // 1. SEED OPDs (Organisasi Perangkat Daerah)

@@ -1,19 +1,13 @@
 /**
  * RBAC Middleware for tRPC
  * Ref: Perpres 132/2022 - Domain Keamanan SPBE
- *
- * Provides role-based access control for API procedures:
- * - SUPER_ADMIN: Diskominfo - Full access to all operations
- * - OPERATOR: OPD Staff - Limited to own OPD data
- * - AUDITOR: Inspektorat - Read-only access to audit trails
- * - LEADER: Executive - Dashboard view only
  */
 
 import type { UserRole } from "./index";
+import { rolePermissions } from "./permissions";
 
 /**
  * Custom RBAC Error for access control violations
- * This can be caught and converted to TRPCError in the API layer
  */
 export class RBACError extends Error {
   code: "UNAUTHORIZED" | "FORBIDDEN";
@@ -37,8 +31,46 @@ export interface UserContext {
 }
 
 /**
+ * Validates that the user's role has the required permission for a resource
+ * @param user The user context
+ * @param resource The resource domain (e.g. 'opd', 'probis')
+ * @param action The action (e.g. 'read', 'create')
+ */
+export function requirePermission(
+  user: UserContext | null | undefined,
+  resource: keyof typeof rolePermissions.SUPER_ADMIN,
+  action: string // We could infer this strictly but string is safer for generic usage
+): asserts user is UserContext {
+  if (!user) {
+    throw new RBACError(
+      "UNAUTHORIZED",
+      "You must be logged in to access this resource"
+    );
+  }
+
+  // Use Better Auth Access Control check
+  // Note: ac.newRole create a role checker, but here we just want to check if the user's role *definition* allows it.
+  // We can manually check existing definition since we are not fully integrating the plugin runtime yet.
+
+  const roleDef = rolePermissions[user.role as keyof typeof rolePermissions];
+  if (!roleDef) {
+    throw new RBACError("FORBIDDEN", `Invalid user role: ${user.role}`);
+  }
+
+  // Check if permission exists in the role definition
+  // @ts-expect-error - dynamic check
+  const allowedActions = roleDef[resource] as readonly string[] | undefined;
+
+  if (!(allowedActions && allowedActions.includes(action))) {
+    throw new RBACError(
+      "FORBIDDEN",
+      `Access denied. Required permission: ${resource}.${action}`
+    );
+  }
+}
+
+/**
  * Verify user has one of the allowed roles
- * @throws RBACError if user role is not in allowedRoles
  */
 export function verifyRole(
   user: UserContext | null | undefined,
@@ -54,15 +86,13 @@ export function verifyRole(
   if (!allowedRoles.includes(user.role)) {
     throw new RBACError(
       "FORBIDDEN",
-      `Access denied. Required roles: ${allowedRoles.join(", ")}. Your role: ${user.role}`
+      `Access denied. Required roles: ${allowedRoles.join(", ")}`
     );
   }
 }
 
 /**
  * Verify user belongs to the specified OPD or is a Super Admin
- * Operators can only access data from their own OPD
- * @throws RBACError if user is not authorized for the OPD
  */
 export function verifyOPD(
   user: UserContext | null | undefined,
@@ -80,7 +110,7 @@ export function verifyOPD(
     return;
   }
 
-  // Auditors can read any OPD (for audit purposes)
+  // Auditors can read any OPD
   if (user.role === "AUDITOR") {
     return;
   }
@@ -95,88 +125,36 @@ export function verifyOPD(
 }
 
 /**
- * Verify user is a Walidata (Data Steward) - only Super Admins from Diskominfo
- * Used for validating data standards per Satu Data Indonesia
- * @throws RBACError if user is not authorized as Walidata
+ * Verify user is a Walidata (Data Steward)
  */
 export function verifyWalidata(
   user: UserContext | null | undefined
 ): asserts user is UserContext {
-  if (!user) {
-    throw new RBACError(
-      "UNAUTHORIZED",
-      "You must be logged in to access this resource"
-    );
-  }
-
-  // Only Super Admins can act as Walidata
-  if (user.role !== "SUPER_ADMIN") {
-    throw new RBACError(
-      "FORBIDDEN",
-      "Only Walidata (Super Admin) can validate data standards"
-    );
-  }
+  requirePermission(user, "data", "validate");
 }
 
 /**
- * Verify user has read-only access (for Auditors viewing audit trails)
- * @throws RBACError if user is not authorized
+ * Verify user has auditing access
  */
 export function verifyAuditAccess(
   user: UserContext | null | undefined
 ): asserts user is UserContext {
-  if (!user) {
-    throw new RBACError(
-      "UNAUTHORIZED",
-      "You must be logged in to access this resource"
-    );
-  }
-
-  const allowedRoles: UserRole[] = ["SUPER_ADMIN", "AUDITOR"];
-
-  if (!allowedRoles.includes(user.role)) {
-    throw new RBACError(
-      "FORBIDDEN",
-      "Only auditors and administrators can access audit logs"
-    );
-  }
+  requirePermission(user, "audit", "read");
 }
 
 /**
- * Check if user can modify the resource
- * - SUPER_ADMIN: Can modify anything
- * - OPERATOR: Can only modify resources in their OPD
- * - AUDITOR: Cannot modify (read-only)
- * - LEADER: Cannot modify (view-only)
+ * Check if user can modify a resource (helper boolean)
  */
 export function canModify(user: UserContext, resourceOpdId?: string): boolean {
   if (user.role === "SUPER_ADMIN") {
     return true;
   }
 
+  // Check if role has general update permission on the resource?
+  // It depends on the resource type, so we keep the ABAC check:
   if (user.role === "OPERATOR" && resourceOpdId) {
     return user.opdId === resourceOpdId;
   }
 
   return false;
-}
-
-/**
- * Role hierarchy for permission checks
- */
-export const ROLE_HIERARCHY: Record<UserRole, number> = {
-  SUPER_ADMIN: 4,
-  LEADER: 3,
-  AUDITOR: 2,
-  OPERATOR: 1,
-};
-
-/**
- * Check if user has at least the minimum role level
- */
-export function hasMinimumRole(
-  user: UserContext,
-  minimumRole: UserRole
-): boolean {
-  return ROLE_HIERARCHY[user.role] >= ROLE_HIERARCHY[minimumRole];
 }

@@ -22,7 +22,6 @@ import { planningRouter } from "./planning";
 import { probisRouter } from "./probis";
 import { securityRouter } from "./security";
 import { serviceRouter } from "./service";
-import { todoRouter } from "./todo";
 import { userRouter } from "./user";
 
 export const appRouter = router({
@@ -38,9 +37,6 @@ export const appRouter = router({
       user: ctx.user,
     };
   }),
-
-  // Demo router (to be removed later)
-  todo: todoRouter,
 
   // Organization management (tenancy)
   opd: opdRouter,

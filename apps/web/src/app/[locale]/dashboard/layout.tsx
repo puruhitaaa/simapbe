@@ -1,7 +1,6 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { authClient } from "@/lib/auth-client";
+import { getServerSession } from "@/lib/auth-server";
 import { AppSidebar } from "./_components/app-sidebar";
 import { DashboardHeader } from "./_components/dashboard-header";
 
@@ -10,12 +9,8 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await authClient.getSession({
-    fetchOptions: {
-      headers: await headers(),
-      throw: true,
-    },
-  });
+  // Use server-side session fetcher for proper cross-origin cookie handling
+  const session = await getServerSession();
 
   if (!session?.user) {
     redirect("/login");

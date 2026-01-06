@@ -18,7 +18,8 @@
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
     "dotenv": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "elysia": "catalog:"
   },
   "devDependencies": {
     "@simapbe/config": "workspace:*",

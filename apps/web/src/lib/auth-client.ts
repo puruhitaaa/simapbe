@@ -1,4 +1,8 @@
 import type { auth } from "@simapbe/auth";
+import {
+  adminAccessControl,
+  adminPluginRoles,
+} from "@simapbe/auth/admin-access";
 import { env } from "@simapbe/env/web";
 import { adminClient, inferAdditionalFields } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
@@ -9,8 +13,17 @@ export const authClient = createAuthClient({
     // Infer additional fields (role, opdId) from server auth config
     inferAdditionalFields<typeof auth>(),
     // Admin client for user management
-    adminClient(),
+    adminClient({
+      ac: adminAccessControl,
+      roles: adminPluginRoles,
+    }),
   ],
+  // Required for cross-origin cookie handling in production
+  fetchOptions: {
+    credentials: "include",
+    // Prevent browser from caching auth responses
+    cache: "no-store",
+  },
 });
 
 // Export types for use in components

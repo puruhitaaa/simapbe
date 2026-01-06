@@ -8,7 +8,7 @@ import {
   Home,
   LayoutDashboard,
   Lock,
-  Map,
+  Map as MapIcon,
   Network,
   Server,
   Settings,
@@ -39,12 +39,14 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
+import { hasPermission, type ResourceType } from "@/lib/permissions";
 
 interface User {
   id: string;
   name: string;
   email: string;
   image?: string | null;
+  role?: string | null;
 }
 
 interface NavItem {
@@ -52,6 +54,7 @@ interface NavItem {
   url: Route;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
+  permission?: ResourceType;
 }
 
 // 6 SPBE Domain Navigation Items
@@ -61,36 +64,42 @@ const domainItems: NavItem[] = [
     url: "/dashboard/probis" as Route,
     icon: FileText,
     description: "Domain 1 - Arsitektur Proses Bisnis",
+    permission: "probis",
   },
   {
     title: "Data & Informasi",
     url: "/dashboard/data" as Route,
     icon: Database,
     description: "Domain 2 - Satu Data Indonesia",
+    permission: "data",
   },
   {
     title: "Aplikasi",
     url: "/dashboard/aplikasi" as Route,
     icon: LayoutDashboard,
     description: "Domain 3 - Moratorium Aplikasi",
+    permission: "app",
   },
   {
     title: "Infrastruktur",
     url: "/dashboard/infrastruktur" as Route,
     icon: Server,
     description: "Domain 4 - Infrastruktur TIK",
+    permission: "infra",
   },
   {
     title: "Layanan",
     url: "/dashboard/layanan" as Route,
     icon: Network,
     description: "Domain 5 - Layanan SPBE",
+    permission: "service",
   },
   {
     title: "Keamanan",
     url: "/dashboard/keamanan" as Route,
     icon: Lock,
     description: "Domain 6 - Keamanan & Audit",
+    permission: "security",
   },
 ];
 
@@ -100,18 +109,21 @@ const managementItems: NavItem[] = [
     url: "/dashboard/opd" as Route,
     icon: Building2,
     description: "Manajemen OPD",
+    permission: "opd",
   },
   {
     title: "Peta Rencana",
     url: "/dashboard/planning" as Route,
-    icon: Map,
+    icon: MapIcon,
     description: "Perencanaan SPBE",
+    permission: "planning",
   },
   {
     title: "Pengguna",
     url: "/dashboard/users" as Route,
     icon: Users,
     description: "Manajemen Pengguna",
+    permission: "user",
   },
 ];
 
@@ -120,8 +132,9 @@ export function AppSidebar({ user }: { user: User }) {
   const router = useRouter();
 
   const handleSignOut = async () => {
-    await authClient.signOut();
-    router.push("/login");
+    await authClient.signOut({
+      fetchOptions: { onSuccess: () => router.push("/login") },
+    });
   };
 
   const getInitials = (name: string) => {
@@ -176,17 +189,25 @@ export function AppSidebar({ user }: { user: User }) {
           <SidebarGroupLabel>Arsitektur SPBE</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {domainItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    isActive={pathname.startsWith(item.url)}
-                    render={<Link href={item.url} />}
-                  >
-                    <item.icon className="size-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {domainItems.map((item) => {
+                if (
+                  item.permission &&
+                  !hasPermission(user.role, item.permission, "read")
+                ) {
+                  return null;
+                }
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      isActive={pathname.startsWith(item.url)}
+                      render={<Link href={item.url} />}
+                    >
+                      <item.icon className="size-4" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -196,17 +217,25 @@ export function AppSidebar({ user }: { user: User }) {
           <SidebarGroupLabel>Manajemen</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {managementItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    isActive={pathname.startsWith(item.url)}
-                    render={<Link href={item.url} />}
-                  >
-                    <item.icon className="size-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {managementItems.map((item) => {
+                if (
+                  item.permission &&
+                  !hasPermission(user.role, item.permission, "read")
+                ) {
+                  return null;
+                }
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      isActive={pathname.startsWith(item.url)}
+                      render={<Link href={item.url} />}
+                    >
+                      <item.icon className="size-4" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
