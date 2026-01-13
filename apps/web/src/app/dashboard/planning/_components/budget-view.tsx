@@ -64,13 +64,13 @@ export function BudgetView() {
     return (
       <div className="space-y-4">
         <div className="grid gap-4 md:grid-cols-3">
-          <Skeleton className="h-[120px]" />
-          <Skeleton className="h-[120px]" />
-          <Skeleton className="h-[120px]" />
+          <Skeleton className="h-30" />
+          <Skeleton className="h-30" />
+          <Skeleton className="h-30" />
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-          <Skeleton className="h-[350px]" />
-          <Skeleton className="h-[350px]" />
+          <Skeleton className="h-88" />
+          <Skeleton className="h-88" />
         </div>
       </div>
     );
@@ -79,7 +79,7 @@ export function BudgetView() {
   if (!data) {
     return (
       <Card>
-        <CardContent className="flex h-[300px] items-center justify-center">
+        <CardContent className="flex h-75 items-center justify-center">
           <p className="text-muted-foreground">Gagal memuat data anggaran</p>
         </CardContent>
       </Card>
@@ -168,7 +168,7 @@ export function BudgetView() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px] w-full">
+            <div className="h-75 w-full">
               <ResponsiveContainer height={300} width="100%">
                 <BarChart data={yearChartData}>
                   <CartesianGrid
@@ -215,7 +215,7 @@ export function BudgetView() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px] w-full">
+            <div className="h-75 w-full">
               <ResponsiveContainer height={300} width="100%">
                 <PieChart>
                   <Pie

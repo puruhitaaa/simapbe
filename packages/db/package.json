@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@noble/hashes": "^2.0.1",
-    "@prisma/adapter-pg": "^7.1.0",
+    "@prisma/adapter-pg": "catalog:",
     "@prisma/client": "catalog:",
     "@simapbe/env": "workspace:*",
     "dotenv": "catalog:",
@@ -33,7 +33,7 @@
   "devDependencies": {
     "@simapbe/config": "workspace:*",
     "@types/pg": "^8.15.6",
-    "prisma": "^7.1.0",
+    "prisma": "catalog:",
     "typescript": "catalog:"
   }
 }

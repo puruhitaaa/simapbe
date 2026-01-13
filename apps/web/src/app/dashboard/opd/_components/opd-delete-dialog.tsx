@@ -1,17 +1,19 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { trpc } from "@/utils/trpc";
 
 interface OpdDeleteDialogProps {
@@ -69,30 +71,35 @@ export function OpdDeleteDialog({
   };
 
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Hapus OPD</DialogTitle>
-          <DialogDescription>
+    <AlertDialog onOpenChange={onOpenChange} open={open}>
+      <AlertDialogContent className="sm:max-w-[425px]">
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-destructive/10 text-destructive">
+            <AlertTriangle />
+          </AlertDialogMedia>
+          <AlertDialogTitle>Hapus OPD</AlertDialogTitle>
+          <AlertDialogDescription>
             Apakah Anda yakin ingin menghapus OPD ini? Tindakan ini tidak dapat
             dibatalkan.
-          </DialogDescription>
-        </DialogHeader>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
         <div className="rounded-lg border bg-muted/50 p-4">
           <div className="font-medium">{opd?.name}</div>
           <div className="text-muted-foreground text-sm">{opd?.code}</div>
         </div>
-        <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>Batal</DialogClose>
-          <Button
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleteMutation.isPending}>
+            Batal
+          </AlertDialogCancel>
+          <AlertDialogAction
             disabled={deleteMutation.isPending}
             onClick={handleDelete}
             variant="destructive"
           >
             {deleteMutation.isPending ? "Menghapus..." : "Hapus OPD"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

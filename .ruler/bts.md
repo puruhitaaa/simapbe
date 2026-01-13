@@ -23,7 +23,7 @@ This is a monorepo with the following structure:
 - `bun run dev:server` - Start only the server
 - `bun run build` - Build all apps
 - `bun run lint` - Lint all packages
-- `bun run typecheck` - Type check all packages
+- `bun run check-types` - Type check all packages
 
 ## Database Commands
 

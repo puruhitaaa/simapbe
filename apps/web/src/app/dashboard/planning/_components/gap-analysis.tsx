@@ -47,10 +47,10 @@ export function GapAnalysis() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-[200px] w-full" />
+        <Skeleton className="h-50 w-full" />
         <div className="grid gap-4 md:grid-cols-2">
-          <Skeleton className="h-[300px]" />
-          <Skeleton className="h-[300px]" />
+          <Skeleton className="h-75" />
+          <Skeleton className="h-75" />
         </div>
       </div>
     );
@@ -59,7 +59,7 @@ export function GapAnalysis() {
   if (!data) {
     return (
       <Card>
-        <CardContent className="flex h-[300px] items-center justify-center">
+        <CardContent className="flex h-75 items-center justify-center">
           <p className="text-muted-foreground">
             Gagal memuat data gap analysis
           </p>
@@ -73,8 +73,19 @@ export function GapAnalysis() {
     data.gaps.servicesWithoutProbis +
     data.gaps.appsWithoutRecentAudit;
 
-  const gapSeverity =
-    totalGaps === 0 ? "success" : totalGaps < 5 ? "warning" : "destructive";
+  const getGapSeverity = (
+    gaps: number
+  ): "success" | "warning" | "destructive" => {
+    if (gaps === 0) {
+      return "success";
+    }
+    if (gaps < 5) {
+      return "warning";
+    }
+    return "destructive";
+  };
+
+  const gapSeverity = getGapSeverity(totalGaps);
 
   return (
     <div className="space-y-6">
@@ -208,8 +219,8 @@ export function GapAnalysis() {
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">
-              {data.recommendations.map((rec, index) => (
-                <li className="flex items-start gap-3" key={index}>
+              {data.recommendations.map((rec) => (
+                <li className="flex items-start gap-3" key={rec}>
                   <ArrowRight className="mt-0.5 h-4 w-4 text-primary" />
                   <span className="text-sm">{rec}</span>
                 </li>

@@ -13,9 +13,13 @@
       "@types/bun": "^1.3.4",
       "@trpc/server": "^11.7.2",
       "better-auth": "^1.4.9",
+      "@prisma/adapter-pg": "^7.1.0",
       "@prisma/client": "^7.1.0",
+      "prisma": "^7.1.0",
       "@trpc/client": "^11.7.2",
-      "elysia": "^1.3.21"
+      "elysia": "^1.3.21",
+      "@playwright/test": "^1.57.0",
+      "@types/node": "^25.0.3"
     }
   },
   "type": "module",
@@ -23,23 +27,34 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "check-types": "turbo check-types",
-    "dev:native": "turbo -F native dev",
-    "dev:web": "turbo -F web dev",
-    "dev:server": "turbo -F server dev",
-    "db:push": "turbo -F @simapbe/db db:push",
-    "db:studio": "turbo -F @simapbe/db db:studio",
-    "db:generate": "turbo -F @simapbe/db db:generate",
-    "db:migrate": "turbo -F @simapbe/db db:migrate",
-    "db:reset": "turbo -F @simapbe/db db:reset",
-    "db:seed": "turbo -F @simapbe/db db:seed",
+    "dev:native": "turbo run dev --filter=native",
+    "dev:web": "turbo run dev --filter=web",
+    "dev:server": "turbo run dev --filter=server",
+    "db:push": "turbo run db:push --filter=@simapbe/db",
+    "db:studio": "turbo run db:studio --filter=@simapbe/db",
+    "db:generate": "turbo run db:generate --filter=@simapbe/db",
+    "db:migrate": "turbo run db:migrate --filter=@simapbe/db",
+    "db:reset": "turbo run db:reset --filter=@simapbe/db",
+    "db:seed": "turbo run db:seed --filter=@simapbe/db",
     "prepare": "husky",
     "ruler:apply": "bunx @intellectronica/ruler@latest apply --local-only",
-    "auth:generate": "turbo -F @simapbe/auth auth:generate"
+    "auth:generate": "turbo run auth:generate --filter=@simapbe/auth",
+    "test:e2e": "turbo run test:e2e",
+    "test:e2e:ui": "turbo run test:ui --filter=e2e",
+    "test:e2e:debug": "turbo run test:debug --filter=e2e",
+    "test:e2e:install": "cd apps/e2e && bunx playwright install && bunx playwright install-deps",
+    "test:e2e:setup-db": "turbo run setup-db --filter=e2e",
+    "test:e2e:seed": "turbo run test:e2e:seed --filter=e2e",
+    "validate:deployment": "bun scripts/validate-deployment-env.ts"
   },
   "dependencies": {
     "@simapbe/env": "workspace:*",
     "dotenv": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@playwright/test": "catalog:",
+    "@prisma/adapter-pg": "catalog:",
+    "@prisma/client": "catalog:",
+    "prisma": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",
@@ -50,7 +65,8 @@
     "turbo": "^2.6.3",
     "typescript": "catalog:",
     "ultracite": "7.0.7",
-    "elysia": "catalog:"
+    "elysia": "catalog:",
+    "@types/node": "catalog:"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [

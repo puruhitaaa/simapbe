@@ -38,6 +38,16 @@ const VIEW_MODE_OPTIONS = [
   { label: "Tahun", value: ViewMode.Year },
 ] as const;
 
+function getColumnWidth(viewMode: ViewMode): number {
+  if (viewMode === ViewMode.Year) {
+    return 350;
+  }
+  if (viewMode === ViewMode.Month) {
+    return 150;
+  }
+  return 65;
+}
+
 interface GanttChartProps {
   startYear?: number;
   endYear?: number;
@@ -54,7 +64,9 @@ export function GanttChart({
   );
 
   const tasks: Task[] = useMemo(() => {
-    if (!roadmapData?.byYear) return [];
+    if (!roadmapData?.byYear) {
+      return [];
+    }
 
     const allTasks: Task[] = [];
 
@@ -123,7 +135,7 @@ export function GanttChart({
           <Skeleton className="h-4 w-64" />
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[400px] w-full" />
+          <Skeleton className="h-100 w-full" />
         </CardContent>
       </Card>
     );
@@ -142,7 +154,7 @@ export function GanttChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+          <div className="flex h-75 items-center justify-center text-muted-foreground">
             Belum ada inisiatif yang terdaftar
           </div>
         </CardContent>
@@ -189,13 +201,7 @@ export function GanttChart({
             barBackgroundColor="#e2e8f0"
             barCornerRadius={4}
             barProgressColor="#94a3b8"
-            columnWidth={
-              viewMode === ViewMode.Year
-                ? 350
-                : viewMode === ViewMode.Month
-                  ? 150
-                  : 65
-            }
+            columnWidth={getColumnWidth(viewMode)}
             fontSize="12px"
             ganttHeight={400}
             listCellWidth=""

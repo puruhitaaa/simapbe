@@ -6,9 +6,11 @@ import {
   CalendarRange,
   FileDown,
   GitCompareArrows,
+  List,
   Plus,
 } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,9 +20,32 @@ import { ExcelDataActions } from "../_components/excel-data-actions";
 import { BudgetView } from "./_components/budget-view";
 import { GanttChart } from "./_components/gantt-chart";
 import { GapAnalysis } from "./_components/gap-analysis";
+import { PlanDeleteDialog } from "./_components/plan-delete-dialog";
+import { PlanFormDialog } from "./_components/plan-form-dialog";
+import { PlanTable } from "./_components/plan-table";
 
-const tabValues = ["roadmap", "gap-analysis", "budget"] as const;
+const tabValues = ["list", "roadmap", "gap-analysis", "budget"] as const;
 type TabValue = (typeof tabValues)[number];
+
+interface PlanData {
+  id: string;
+  planCode: string;
+  year: number;
+  quarter: number | null;
+  initiativeName: string;
+  description: string | null;
+  domain: string;
+  priority: number;
+  budget: { toNumber: () => number } | number | string | null;
+  budgetCode: string | null;
+  fundingSource: string | null;
+  status: string;
+  progressPercent: number;
+  isGap: boolean;
+  gapDescription: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
 
 const templateColumns = [
   { id: "planCode", label: "Code (Unique)", required: true },
@@ -35,8 +60,11 @@ const templateColumns = [
 export default function PlanningPage() {
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
-    parseAsStringLiteral(tabValues).withDefault("roadmap")
+    parseAsStringLiteral(tabValues).withDefault("list")
   );
+  const [showFormDialog, setShowFormDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PlanData | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -76,6 +104,37 @@ export default function PlanningPage() {
     return result;
   };
 
+  const handleEdit = (plan: PlanData) => {
+    const normalizedPlan = {
+      ...plan,
+      budget:
+        typeof plan.budget === "object" && plan.budget !== null
+          ? (plan.budget as { toNumber: () => number }).toNumber()
+          : plan.budget,
+    };
+    setSelectedPlan(normalizedPlan as PlanData);
+    setShowFormDialog(true);
+  };
+
+  const handleDelete = (plan: PlanData) => {
+    setSelectedPlan(plan);
+    setShowDeleteDialog(true);
+  };
+
+  const handleCloseFormDialog = (open: boolean) => {
+    setShowFormDialog(open);
+    if (!open) {
+      setSelectedPlan(null);
+    }
+  };
+
+  const handleCloseDeleteDialog = (open: boolean) => {
+    setShowDeleteDialog(open);
+    if (!open) {
+      setSelectedPlan(null);
+    }
+  };
+
   return (
     <DomainPageShell
       actions={
@@ -91,7 +150,7 @@ export default function PlanningPage() {
             <FileDown className="mr-2 h-4 w-4" />
             Ekspor Laporan
           </Button>
-          <Button>
+          <Button onClick={() => setShowFormDialog(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Tambah Inisiatif
           </Button>
@@ -105,7 +164,11 @@ export default function PlanningPage() {
         onValueChange={(value) => setActiveTab(value as TabValue)}
         value={activeTab}
       >
-        <TabsList className="grid w-full grid-cols-3 lg:w-[500px]">
+        <TabsList className="grid w-full grid-cols-4 lg:w-150">
+          <TabsTrigger className="flex items-center gap-2" value="list">
+            <List className="h-4 w-4" />
+            <span className="hidden sm:inline">Daftar</span>
+          </TabsTrigger>
           <TabsTrigger className="flex items-center gap-2" value="roadmap">
             <CalendarRange className="h-4 w-4" />
             <span className="hidden sm:inline">Roadmap</span>
@@ -120,6 +183,10 @@ export default function PlanningPage() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent className="space-y-4" value="list">
+          <PlanTable onDelete={handleDelete} onEdit={handleEdit} />
+        </TabsContent>
+
         <TabsContent className="space-y-4" value="roadmap">
           <GanttChart endYear={2029} startYear={2025} />
         </TabsContent>
@@ -132,6 +199,43 @@ export default function PlanningPage() {
           <BudgetView />
         </TabsContent>
       </Tabs>
+
+      <PlanFormDialog
+        editData={
+          selectedPlan
+            ? {
+                id: selectedPlan.id,
+                planCode: selectedPlan.planCode,
+                year: selectedPlan.year,
+                quarter: selectedPlan.quarter,
+                initiativeName: selectedPlan.initiativeName,
+                description: selectedPlan.description,
+                domain: selectedPlan.domain,
+                priority: selectedPlan.priority,
+                budget:
+                  typeof selectedPlan.budget === "object" &&
+                  selectedPlan.budget !== null
+                    ? (
+                        selectedPlan.budget as { toNumber: () => number }
+                      ).toNumber()
+                    : selectedPlan.budget,
+                budgetCode: selectedPlan.budgetCode,
+                fundingSource: selectedPlan.fundingSource,
+                status: selectedPlan.status,
+                isGap: selectedPlan.isGap,
+                gapDescription: selectedPlan.gapDescription,
+              }
+            : null
+        }
+        onOpenChange={handleCloseFormDialog}
+        open={showFormDialog}
+      />
+
+      <PlanDeleteDialog
+        onOpenChange={handleCloseDeleteDialog}
+        open={showDeleteDialog}
+        plan={selectedPlan}
+      />
     </DomainPageShell>
   );
 }

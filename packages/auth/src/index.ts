@@ -2,6 +2,7 @@ import prisma from "@simapbe/db";
 import { env } from "@simapbe/env/server";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins";
 import { adminAccessControl, adminPluginRoles } from "./admin-access";
 
@@ -54,6 +55,7 @@ export const auth = betterAuth({
   plugins: [
     // Admin plugin for user management
     // Only SUPER_ADMIN can perform admin operations (listUsers, setRole, etc.)
+    nextCookies(),
     admin({
       defaultRole: "OPERATOR",
       ac: adminAccessControl,
