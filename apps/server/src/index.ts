@@ -10,7 +10,23 @@ import { splpRouter } from "./splp";
 const app = new Elysia()
   .use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: (request) => {
+        const origin = request.headers.get("origin");
+        if (!origin) return false;
+
+        // Allow CORS_ORIGIN
+        if (origin === env.CORS_ORIGIN) return true;
+
+        // Allow Vercel preview deployments
+        if (
+          env.NODE_ENV === "production" &&
+          (origin.endsWith(".vercel.app") || origin.endsWith(".vercel.dev"))
+        ) {
+          return true;
+        }
+
+        return false;
+      },
       methods: ["GET", "POST", "OPTIONS"],
       allowedHeaders: [
         "Content-Type",
@@ -21,7 +37,7 @@ const app = new Elysia()
       credentials: true,
     })
   )
-  .all("/api/auth/*", (context) => {
+  .all("/api/auth/*", async (context) => {
     const { request, status } = context;
     if (["POST", "GET"].includes(request.method)) {
       return auth.handler(request);

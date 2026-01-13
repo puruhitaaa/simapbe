@@ -16,7 +16,14 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
 
-  trustedOrigins: [env.CORS_ORIGIN],
+  baseURL: env.BETTER_AUTH_URL,
+  trustedOrigins: [
+    env.CORS_ORIGIN,
+    // Add production Vercel URLs here
+    ...(env.NODE_ENV === "production" && env.VERCEL_URL
+      ? [`https://${env.VERCEL_URL}`]
+      : []),
+  ],
   emailAndPassword: {
     enabled: true,
   },
@@ -43,8 +50,8 @@ export const auth = betterAuth({
 
   advanced: {
     defaultCookieAttributes: {
-      sameSite: "none",
-      secure: true,
+      sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+      secure: env.NODE_ENV === "production",
       httpOnly: true,
     },
   },
