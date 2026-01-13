@@ -6,7 +6,7 @@
     "BETTER_AUTH_SECRET",
     "BETTER_AUTH_URL",
     "CORS_ORIGIN",
-    "NEXT_PUBLIC_SERVER_URL"
+    "VITE_SERVER_URL"
   ],
   "tasks": {
     "build": {

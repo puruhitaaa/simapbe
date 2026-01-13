@@ -1,12 +1,15 @@
-import { createEnv } from "@t3-oss/env-nextjs";
+import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
 export const env = createEnv({
+  clientPrefix: "VITE_",
   client: {
-    NEXT_PUBLIC_SERVER_URL: z.url(),
+    VITE_SERVER_URL: z.url(),
   },
   runtimeEnv: {
-    NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL,
+    VITE_SERVER_URL:
+      (import.meta as unknown as { env?: Record<string, string | undefined> })
+        .env?.VITE_SERVER_URL ?? process.env.VITE_SERVER_URL,
   },
   emptyStringAsUndefined: true,
 });
