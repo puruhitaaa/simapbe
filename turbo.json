@@ -50,6 +50,34 @@
     "auth:generate": {
       "cache": false,
       "persistent": true
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "env": [
+        "E2E_BASE_URL",
+        "E2E_API_URL",
+        "E2E_SUPER_ADMIN_EMAIL",
+        "E2E_SUPER_ADMIN_PASSWORD",
+        "E2E_OPERATOR_EMAIL",
+        "E2E_OPERATOR_PASSWORD",
+        "E2E_AUDITOR_EMAIL",
+        "E2E_AUDITOR_PASSWORD",
+        "E2E_LEADER_EMAIL",
+        "E2E_LEADER_PASSWORD"
+      ]
+    },
+    "test:ui": {
+      "cache": false
+    },
+    "test:debug": {
+      "cache": false
+    },
+    "setup-db": {
+      "cache": false
+    },
+    "test:e2e:seed": {
+      "cache": false
     }
   }
 }
