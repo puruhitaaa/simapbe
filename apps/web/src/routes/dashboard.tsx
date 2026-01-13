@@ -2,41 +2,19 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { authClient } from "@/lib/auth-client";
+import { getUser } from "@/functions/get-user";
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: async () => {
-    if (typeof window === "undefined") {
-      return { session: null };
-    }
+    const session = await getUser();
 
-    const sessionResult = await authClient.getSession({
-      fetchOptions: {
-        credentials: "include",
-        throw: false,
-      },
-    });
-
-    if (
-      sessionResult &&
-      typeof sessionResult === "object" &&
-      "data" in sessionResult
-    ) {
-      return { session: sessionResult.data ?? null };
-    }
-
-    return { session: null };
-  },
-  loader: ({ context }) => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    if (!context.session) {
+    if (!session?.user) {
       throw redirect({
         to: "/login",
       });
     }
+
+    return { session };
   },
   component: DashboardLayout,
 });
