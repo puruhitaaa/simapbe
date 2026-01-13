@@ -26,7 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { trpc } from "@/utils/trpc";
+import { useTRPC } from "@/utils/trpc";
 
 const domainCards = [
   {
@@ -153,6 +153,8 @@ function DomainCard({
 }
 
 export function DashboardOverview() {
+  const trpc = useTRPC();
+
   // Fetch OPD stats
   const opdStats = useQuery(trpc.opd.getStats.queryOptions());
 

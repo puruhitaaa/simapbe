@@ -3,13 +3,14 @@ import { Building2 } from "lucide-react";
 import { useState } from "react";
 
 import SignInForm from "@/components/sign-in-form";
+import SignUpForm from "@/components/sign-up-form";
 
 export const Route = createFileRoute("/login")({
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const [_showSignIn, setShowSignIn] = useState(true);
+  const [showSignIn, setShowSignIn] = useState(true);
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -36,12 +37,11 @@ function RouteComponent() {
       {/* Right side - Form */}
       <div className="flex items-center justify-center p-8">
         <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-          {/* {showSignIn ? (
+          {showSignIn ? (
             <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
           ) : (
             <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
-          )} */}
-          <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
+          )}
         </div>
       </div>
     </div>
