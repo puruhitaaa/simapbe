@@ -2,7 +2,6 @@ import prisma from "@simapbe/db";
 import { env } from "@simapbe/env/server";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins";
 import { adminAccessControl, adminPluginRoles } from "./admin-access";
 
@@ -47,7 +46,6 @@ export const auth = betterAuth({
       sameSite: "none",
       secure: true,
       httpOnly: true,
-      partitioned: true, // Required for cross-origin cookies in modern browsers (Chrome 115+)
     },
   },
 
@@ -55,7 +53,6 @@ export const auth = betterAuth({
   plugins: [
     // Admin plugin for user management
     // Only SUPER_ADMIN can perform admin operations (listUsers, setRole, etc.)
-    nextCookies(),
     admin({
       defaultRole: "OPERATOR",
       ac: adminAccessControl,
@@ -63,8 +60,6 @@ export const auth = betterAuth({
     }),
   ],
 });
-
-export { adminAccessControl, adminPluginRoles } from "./admin-access";
 
 // Export auth types for use in API and frontend
 export type Auth = typeof auth;
