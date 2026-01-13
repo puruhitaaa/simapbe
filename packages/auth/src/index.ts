@@ -2,7 +2,6 @@ import prisma from "@simapbe/db";
 import { env } from "@simapbe/env/server";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins";
 import { adminAccessControl, adminPluginRoles } from "./admin-access";
 
@@ -17,7 +16,14 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
 
-  trustedOrigins: [env.CORS_ORIGIN],
+  baseURL: env.BETTER_AUTH_URL,
+  trustedOrigins: [
+    env.CORS_ORIGIN,
+    // Add production Vercel URLs here
+    ...(env.NODE_ENV === "production" && env.VERCEL_URL
+      ? [`https://${env.VERCEL_URL}`]
+      : []),
+  ],
   emailAndPassword: {
     enabled: true,
   },
@@ -44,10 +50,9 @@ export const auth = betterAuth({
 
   advanced: {
     defaultCookieAttributes: {
-      sameSite: "none",
-      secure: true,
+      sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+      secure: env.NODE_ENV === "production",
       httpOnly: true,
-      partitioned: true, // Required for cross-origin cookies in modern browsers (Chrome 115+)
     },
   },
 
@@ -55,7 +60,6 @@ export const auth = betterAuth({
   plugins: [
     // Admin plugin for user management
     // Only SUPER_ADMIN can perform admin operations (listUsers, setRole, etc.)
-    nextCookies(),
     admin({
       defaultRole: "OPERATOR",
       ac: adminAccessControl,
@@ -63,8 +67,6 @@ export const auth = betterAuth({
     }),
   ],
 });
-
-export { adminAccessControl, adminPluginRoles } from "./admin-access";
 
 // Export auth types for use in API and frontend
 export type Auth = typeof auth;
